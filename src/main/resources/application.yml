@@ -1,0 +1,20 @@
+logging:
+  level:
+    root: warn
+    home: debug
+    org.springframework: debug
+
+server:
+  port: 8077
+
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        opaque-token:
+          introspection-uri: http://localhost:8081/introspect
+          client-id: client
+          client-secret: secret
+#        jwt:
+#          jwk-set-uri: http://localhost:8081/certs
+
