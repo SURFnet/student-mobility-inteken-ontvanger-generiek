@@ -5,12 +5,13 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.springframework.util.Assert;
 
+import java.io.Serializable;
 import java.net.URI;
 
 @NoArgsConstructor
 @Getter
 @Setter
-public class EnrollmentRequest {
+public class EnrollmentRequest implements Serializable {
 
     private URI offering;
     private URI person;

@@ -6,6 +6,7 @@ import lombok.val;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.View;
 import org.springframework.web.servlet.view.RedirectView;
 
+import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 
 @RestController
@@ -23,14 +25,18 @@ public class EnrollmentEndpoint {
 
 
     @PostMapping(value = "/enrollment", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
-    public View enrollment(@ModelAttribute EnrollmentRequest enrollmentRequest) throws IOException {
+    public View enrollment(HttpServletRequest request, @ModelAttribute EnrollmentRequest enrollmentRequest) throws IOException {
         enrollmentRequest.validate();
-        //Start
-        return new RedirectView(enrollmentRequest.getReturnTo().toString());
+        request.getSession().setAttribute("enrollmentRequest", enrollmentRequest);
+        //Start authorization flow using Spring - no manually redirect
+        return new RedirectView("/me");
     }
 
-    @GetMapping("/redirect")
-    public View redirect() {
+    @GetMapping("/me")
+    public View me(HttpServletRequest request, Authentication authentication) {
         //Exchange code for access_token
+        Object enrollmentRequest = request.getSession().getAttribute("enrollmentRequest");
+        System.out.println();
+        return new RedirectView("https://www.google.com", false);
     }
 }

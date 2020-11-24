@@ -1,20 +1,60 @@
 logging:
   level:
-    root: warn
-    home: debug
-    org.springframework: debug
+    root: INFO
+    generic: DEBUG
+    org.springframework.security: TRACE
 
 server:
-  port: 8077
+  port: 8092
+  error:
+    path: /error
+  servlet:
+    session:
+      tracking-modes: cookie
+
+config:
+  client_url: http://localhost:3003
+  server_login: http://localhost:8092/generic/api/private/sso
+
+oidc:
+  account_linking_context_class_ref: https://eduid.nl/trust/linked-institution
 
 spring:
+  main:
+    banner-mode: off
   security:
     oauth2:
-      resourceserver:
-        opaque-token:
-          introspection-uri: http://localhost:8081/introspect
-          client-id: client
-          client-secret: secret
-#        jwt:
-#          jwk-set-uri: http://localhost:8081/certs
+      client:
+        registration:
+          oidc:
+            client-id: student.mobility.rp.localhost
+            client-secret: secret
+            redirect-uri: http://localhost:8092/redirect_uri
+            authorization-grant-type: authorization_code
+        provider:
+          oidc:
+            # we deliberately omit the user-info-uri as we request the user claims in the ID token
+            # user-info-uri: https://connect.test2.surfconext.nl/oidc/userinfo
+            authorization-uri: https://connect.test2.surfconext.nl/oidc/authorize
+            token-uri: https://connect.test2.surfconext.nl/oidc/token
+            jwk-set-uri: https://connect.test2.surfconext.nl/oidc/certs
+            #            authorization-uri: http://localhost:8080/oidc/authorize
+            #            token-uri: http://localhost:8080/oidc/token
+            #            jwk-set-uri: http://localhost:8080/oidc/certs
+            user-name-attribute: sub
 
+# used by the git plugin
+info:
+  build:
+    artifact: "@project.artifactId@"
+    version: "@project.version@"
+
+management:
+  endpoints:
+    enabled-by-default: false
+  endpoint:
+    health:
+      enabled: true
+      show-details: when_authorized
+    info:
+      enabled: true
