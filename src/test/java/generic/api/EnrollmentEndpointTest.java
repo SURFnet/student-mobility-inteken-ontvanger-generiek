@@ -21,7 +21,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                 .post("/enrollment")
                 .then()
                 .statusCode(SC_MOVED_TEMPORARILY)
-                .header("Location", "http://localhost:" + port + "/redirect");
+                .header("Location", "http://localhost:" + port + "/me");
 
 
     }

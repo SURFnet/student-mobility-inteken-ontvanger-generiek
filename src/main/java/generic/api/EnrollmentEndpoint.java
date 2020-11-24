@@ -27,6 +27,8 @@ public class EnrollmentEndpoint {
     @PostMapping(value = "/enrollment", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
     public View enrollment(HttpServletRequest request, @ModelAttribute EnrollmentRequest enrollmentRequest) throws IOException {
         enrollmentRequest.validate();
+
+        //TODO deserialize the enrollmentRequest and add it as query param to "/me"- configure app to be stateless
         request.getSession().setAttribute("enrollmentRequest", enrollmentRequest);
         //Start authorization flow using Spring - no manually redirect
         return new RedirectView("/me");
