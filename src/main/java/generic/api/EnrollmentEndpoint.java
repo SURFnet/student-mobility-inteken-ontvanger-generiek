@@ -36,7 +36,7 @@ public class EnrollmentEndpoint {
     public View me(HttpServletRequest request, Authentication authentication) {
         //Exchange code for access_token
         Object enrollmentRequest = request.getSession().getAttribute("enrollmentRequest");
-        System.out.println();
+        //TODO - call the home institution, then the configured specific intake app and return with the  results
         return new RedirectView("https://www.google.com", false);
     }
 }

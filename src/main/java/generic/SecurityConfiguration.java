@@ -3,6 +3,7 @@ package generic;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import generic.mock.MockAuthorizationFilter;
+import generic.model.ExtendedOidcUser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
@@ -11,9 +12,15 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
+import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService;
 import org.springframework.security.oauth2.client.registration.InMemoryClientRegistrationRepository;
+import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
 import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;
+import org.springframework.security.oauth2.core.OAuth2AccessToken;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
+import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.web.authentication.preauth.AbstractPreAuthenticatedProcessingFilter;
 
 import java.net.URI;
@@ -59,6 +66,9 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
         http.csrf().disable()
                 .authorizeRequests(authorize -> authorize.anyRequest().authenticated())
                 .oauth2Login()
+                .userInfoEndpoint()
+                .oidcUserService(this.oidcUserService())
+                .and()
                 .redirectionEndpoint().baseUri(this.redirectUri)
                 .and().authorizationEndpoint()
                 .authorizationRequestResolver(authorizationRequestResolver);
@@ -66,6 +76,15 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
         if (environment.acceptsProfiles(Profiles.of("test"))) {
             http.addFilterBefore(new MockAuthorizationFilter(), AbstractPreAuthenticatedProcessingFilter.class);
         }
+    }
+
+    private OAuth2UserService<OidcUserRequest, OidcUser> oidcUserService() {
+        final OidcUserService delegate = new OidcUserService();
+        return (userRequest) -> {
+            OidcUser oidcUser = delegate.loadUser(userRequest);
+            OAuth2AccessToken accessToken = userRequest.getAccessToken();
+            return new ExtendedOidcUser(accessToken, oidcUser);
+        };
     }
 
     private Consumer<OAuth2AuthorizationRequest.Builder> authorizationRequestCustomizer() {
