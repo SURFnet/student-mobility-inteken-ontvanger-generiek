@@ -49,18 +49,18 @@ public class EnrollmentEndpoint {
     /*
      * Endpoint called by the student-mobility-broker form submit
      */
-    @PostMapping(value = "/enrollment", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
-    public View enrollment(HttpServletRequest request, @ModelAttribute EnrollmentRequest enrollmentRequest) throws IOException {
+    @PostMapping(value = "/api/enrollment", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+    public View enrollment(HttpServletRequest request, @ModelAttribute EnrollmentRequest enrollmentRequest) {
         enrollmentRequest.validate();
         request.getSession().setAttribute(ENROLLMENT_REQUEST_SESSION_KEY, enrollmentRequest);
         //Start authorization flow using Spring - no manually redirect
-        return new RedirectView("/callback");
+        return new RedirectView("/api/callback");
     }
 
     /*
      * Callback after authentication. Give browser-control back to the client to call start and show progress-spinner
      */
-    @GetMapping("/callback")
+    @GetMapping("/api/callback")
     public View callback() {
         return new RedirectView(clientUrl, clientUrl.startsWith("/"));
     }
@@ -68,7 +68,7 @@ public class EnrollmentEndpoint {
     /*
      * Called by the client to display user and course information
      */
-    @GetMapping("/me")
+    @GetMapping("/api/me")
     public Map<String, Object> me(HttpServletRequest request, Authentication authentication) {
         ExtendedOidcUser oidcUser = (ExtendedOidcUser) authentication.getPrincipal();
         EnrollmentRequest enrollmentRequest = (EnrollmentRequest) request.getSession().getAttribute(ENROLLMENT_REQUEST_SESSION_KEY);
@@ -89,7 +89,7 @@ public class EnrollmentEndpoint {
     /*
      * Start the actual enrollment based on the data returned in the me endpoint
      */
-    @PostMapping("/start")
+    @PostMapping("/api/start")
     public Map<String, Object> start(@RequestBody Map<String, Object> body) {
         HttpHeaders httpHeaders = new HttpHeaders();
         httpHeaders.setBasicAuth(backendApiUser, backendApiPassword);

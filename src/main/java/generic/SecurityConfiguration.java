@@ -7,8 +7,14 @@ import generic.mock.MockAuthorizationFilter;
 import generic.model.EnrollmentRequest;
 import generic.model.ExtendedOidcUser;
 import generic.security.ExtendedOidcUserService;
+import generic.security.OidcCorsConfigurationSource;
+import org.apache.catalina.Context;
+import org.apache.tomcat.util.http.Rfc6265CookieProcessor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory;
+import org.springframework.boot.web.servlet.server.ServletWebServerFactory;
+import org.springframework.context.annotation.Bean;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -57,7 +63,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
     @Override
     public void configure(WebSecurity web) {
         web.ignoring()
-                .antMatchers("/enrollment", "/config", "/actuator/**");
+                .antMatchers("/api/enrollment", "/actuator/**");
     }
 
     @Override
@@ -65,8 +71,9 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
         DefaultOAuth2AuthorizationRequestResolver authorizationRequestResolver =
                 new DefaultOAuth2AuthorizationRequestResolver(clientRegistrationRepository, "/oauth2/authorization");
         authorizationRequestResolver.setAuthorizationRequestCustomizer(authorizationRequestCustomizer());
-
-        http.csrf().disable()
+        http.cors().configurationSource(new OidcCorsConfigurationSource())
+                .and()
+                .csrf().disable()
                 .authorizeRequests(authorize -> authorize.anyRequest().authenticated())
                 .oauth2Login()
                 .userInfoEndpoint()

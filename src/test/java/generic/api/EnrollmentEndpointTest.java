@@ -9,9 +9,6 @@ import io.restassured.filter.session.SessionFilter;
 import io.restassured.http.ContentType;
 import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.api.BeforeEach;
-
-import static org.hamcrest.Matchers.emptyOrNullString;
-import static org.hamcrest.Matchers.equalTo;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -33,7 +30,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static io.restassured.RestAssured.given;
 import static org.apache.http.HttpStatus.SC_MOVED_TEMPORARILY;
-import static org.hamcrest.Matchers.isEmptyOrNullString;
+import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED_VALUE;
 
@@ -61,7 +58,7 @@ public class EnrollmentEndpointTest {
     void callback() {
         given().redirects().follow(false)
                 .when()
-                .get("/callback")
+                .get("/api/callback")
                 .then()
                 .statusCode(SC_MOVED_TEMPORARILY)
                 .header("Location", "http://localhost:3003/enroll");
@@ -77,10 +74,10 @@ public class EnrollmentEndpointTest {
                 .param("person", "http://localhost:8081/person")
                 .param("scope", "groups")
                 .param("returnTo", "http://localhost:8081")
-                .post("/enrollment")
+                .post("/api/enrollment")
                 .then()
                 .statusCode(SC_MOVED_TEMPORARILY)
-                .header("Location", "http://localhost:" + port + "/callback");
+                .header("Location", "http://localhost:" + port + "/api/callback");
 
         stubFor(get(urlPathMatching("/offering")).willReturn(aResponse()
                 .withHeader("Content-Type", "application/json")
@@ -91,7 +88,7 @@ public class EnrollmentEndpointTest {
 
         Map<String, Map<String, Object>> result = given().filter(sessionFilter)
                 .when()
-                .get("/me")
+                .get("/api/me")
                 .as(new TypeRef<Map<String, Map<String, Object>>>() {
                 });
         assertEquals("Maartje", result.get("person").get("givenName"));
@@ -108,7 +105,7 @@ public class EnrollmentEndpointTest {
                 .when()
                 .contentType(ContentType.JSON)
                 .body(Collections.singletonMap("N/", "A"))
-                .post("/start")
+                .post("/api/start")
                 .then()
                 .body("result", equalTo("ok"));
     }

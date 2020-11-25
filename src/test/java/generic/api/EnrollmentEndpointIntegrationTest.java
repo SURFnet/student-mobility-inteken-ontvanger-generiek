@@ -40,7 +40,7 @@ public class EnrollmentEndpointIntegrationTest {
                 .param("person", "http://localhost:8081/person")
                 .param("scope", "write")
                 .param("returnTo", "http://localhost:8081")
-                .post("/enrollment");
+                .post("/api/enrollment");
 
         String location = given()
                 .redirects().follow(false)
