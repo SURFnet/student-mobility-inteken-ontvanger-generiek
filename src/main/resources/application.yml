@@ -6,15 +6,18 @@ logging:
 
 server:
   port: 8092
-  error:
-    path: /error
   servlet:
     session:
       tracking-modes: cookie
 
-config:
-  client_url: http://localhost:3003
-  server_login: http://localhost:8092/generic/api/private/sso
+# Can be relative path in non-develeopment mode
+client_url: "http://localhost:3003/enroll"
+# Details on which inteken implementation to call
+backend:
+  url: "http://localhost:8093/intake"
+  api_user: user
+  api_password: secret
+
 
 oidc:
   account_linking_context_class_ref: https://eduid.nl/trust/linked-institution
@@ -34,7 +37,6 @@ spring:
         provider:
           oidc:
             # we deliberately omit the user-info-uri as we request the user claims in the ID token
-            # user-info-uri: https://connect.test2.surfconext.nl/oidc/userinfo
             authorization-uri: https://connect.test2.surfconext.nl/oidc/authorize
             token-uri: https://connect.test2.surfconext.nl/oidc/token
             jwk-set-uri: https://connect.test2.surfconext.nl/oidc/certs

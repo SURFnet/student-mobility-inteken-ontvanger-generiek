@@ -2,8 +2,11 @@ package generic;
 
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
+import generic.api.EnrollmentEndpoint;
 import generic.mock.MockAuthorizationFilter;
+import generic.model.EnrollmentRequest;
 import generic.model.ExtendedOidcUser;
+import generic.security.ExtendedOidcUserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
@@ -19,12 +22,12 @@ import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
 import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;
 import org.springframework.security.oauth2.core.OAuth2AccessToken;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
-import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.web.authentication.preauth.AbstractPreAuthenticatedProcessingFilter;
+import org.springframework.web.context.request.RequestAttributes;
+import org.springframework.web.context.request.RequestContextHolder;
 
 import java.net.URI;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -54,7 +57,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
     @Override
     public void configure(WebSecurity web) {
         web.ignoring()
-                .antMatchers("/actuator/**", "/enrollment", "/error");
+                .antMatchers("/enrollment", "/config", "/actuator/**");
     }
 
     @Override
@@ -67,7 +70,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
                 .authorizeRequests(authorize -> authorize.anyRequest().authenticated())
                 .oauth2Login()
                 .userInfoEndpoint()
-                .oidcUserService(this.oidcUserService())
+                .oidcUserService(new ExtendedOidcUserService())
                 .and()
                 .redirectionEndpoint().baseUri(this.redirectUri)
                 .and().authorizationEndpoint()
@@ -76,15 +79,6 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
         if (environment.acceptsProfiles(Profiles.of("test"))) {
             http.addFilterBefore(new MockAuthorizationFilter(), AbstractPreAuthenticatedProcessingFilter.class);
         }
-    }
-
-    private OAuth2UserService<OidcUserRequest, OidcUser> oidcUserService() {
-        final OidcUserService delegate = new OidcUserService();
-        return (userRequest) -> {
-            OidcUser oidcUser = delegate.loadUser(userRequest);
-            OAuth2AccessToken accessToken = userRequest.getAccessToken();
-            return new ExtendedOidcUser(accessToken, oidcUser);
-        };
     }
 
     private Consumer<OAuth2AuthorizationRequest.Builder> authorizationRequestCustomizer() {
@@ -106,8 +100,9 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
             //This prevents us from calling the userinfo endpoint
             additionalParameters.put("claims", oidcClaimsRequest.toJSONString());
             //Otherwise we stick to oauth2 instead of oidc
-            customizer.scope("openid");
-            customizer.state("somethingweird");
+            EnrollmentRequest enrollmentRequest = (EnrollmentRequest) RequestContextHolder.currentRequestAttributes()
+                    .getAttribute(EnrollmentEndpoint.ENROLLMENT_REQUEST_SESSION_KEY, RequestAttributes.SCOPE_SESSION);
+            customizer.scope("openid", enrollmentRequest.getScope());
             customizer.additionalParameters(additionalParameters);
         };
     }

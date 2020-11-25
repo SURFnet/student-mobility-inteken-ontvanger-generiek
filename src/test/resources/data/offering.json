@@ -1,0 +1,99 @@
+{
+  "offeringId": "123e4567-e89b-12d3-a456-134564174000",
+  "type": "component",
+  "academicSession": {
+    "academicSessionId": "123e4567-e89b-12d3-a456-426614174000",
+    "name": "Fall semester 2020",
+    "startDate": "2020-08-17T00:00:00.000Z",
+    "endDate": "2020-12-18T00:00:00.000Z",
+    "ext": {}
+  },
+  "name": "Final written test for INFOMQNM for fall semseter 2020",
+  "abbreviation": "Test-INFOMQNM-20FS",
+  "description": "Prove in wirting knowledge of research methods, including: Acquire knowledge of HCI research paradigms Able to design suitable research studies (e.g., choose between within and between subject designs) Define/apply/design metrics and scales Define/produce materials (e.g., stimuli and questionnaires) Define protocols for research studies Understands and take in account concepts of reliability and validity Analyze and improve methods and analysis of published scientific articles Able to deliver scientific reports Prove in writing knowledge of ­­­statistics, including: Handle hypothesis testing with complex designs (e.g., including , dependent, independent, and co variates) Data preparation (e.g., coding and feature selection) Reason towards adequate techniques to ensure valid outcomes (e.g., be aware of type I, type II errors) Select an appropriate sampling method (e.g., stratified) Perform parametric tests (e.g., repeated measures (M)ANOVA) Perform non-parametric tests (e.g., Chi-square, Mann-Whitney, and Kruskal-Wallis)",
+  "mainLanguage": "nl-NL",
+  "maxNumberStudents": 200,
+  "enrolledNumberStudents": 150,
+  "pendingNumberStudents": 50,
+  "isLineItem": true,
+  "resultValueType": "10",
+  "ext": {},
+  "startDateTime": "2020-12-15T00:00:00.000Z",
+  "endDateTime": "2020-12-16T00:00:00.000Z",
+  "resultWeight": 100,
+  "room": {
+    "roomId": "123e4567-e89b-12d3-a456-332114174000",
+    "abbreviation": "Bb 4.54",
+    "name": "Beatrix building room 4.54",
+    "type": "exam location",
+    "description": "External education and exam room 4.54",
+    "totalSeats": 300,
+    "availableSeats": 200,
+    "floor": 4,
+    "wing": "None",
+    "geolocation": {
+      "latitude": 52.088255,
+      "longitude": 5.106669
+    },
+    "ext": {}
+  },
+  "component": {
+    "componentId": "123e4567-e89b-12d3-a456-426614174000",
+    "type": "test",
+    "name": "Written test for INFOMQNM",
+    "abbreviation": "Test-INFOMQNM",
+    "description": "Prove executable knowledge of research methods, including: Acquire knowledge of HCI research paradigms Able to design suitable research studies (e.g., choose between within and between subject designs) Define/apply/design metrics and scales Define/produce materials (e.g., stimuli and questionnaires) Define protocols for research studies Understands and take in account concepts of reliability and validity Analyze and improve methods and analysis of published scientific articles Able to deliver scientific reports\nProve executable knowledge of ­­­statistics, including: Handle hypothesis testing with complex designs (e.g., including , dependent, independent, and co variates) Data preparation (e.g., coding and feature selection) Reason towards adequate techniques to ensure valid outcomes (e.g., be aware of type I, type II errors) Select an appropriate sampling method (e.g., stratified) Perform parametric tests (e.g., repeated measures (M)ANOVA) Perform non-parametric tests (e.g., Chi-square, Mann-Whitney, and Kruskal-Wallis)",
+    "ext": {}
+  },
+  "courseOffering": {
+    "offeringId": "123e4567-e89b-12d3-a456-134564174000",
+    "type": "component",
+    "academicSession": {
+      "academicSessionId": "123e4567-e89b-12d3-a456-426614174000",
+      "name": "Fall semester 2020",
+      "startDate": "2020-08-17T00:00:00.000Z",
+      "endDate": "2020-12-18T00:00:00.000Z",
+      "ext": {}
+    },
+    "name": "Final written test for INFOMQNM for fall semseter 2020",
+    "abbreviation": "Test-INFOMQNM-20FS",
+    "description": "Prove in wirting knowledge of research methods, including: Acquire knowledge of HCI research paradigms Able to design suitable research studies (e.g., choose between within and between subject designs) Define/apply/design metrics and scales Define/produce materials (e.g., stimuli and questionnaires) Define protocols for research studies Understands and take in account concepts of reliability and validity Analyze and improve methods and analysis of published scientific articles Able to deliver scientific reports Prove in writing knowledge of ­­­statistics, including: Handle hypothesis testing with complex designs (e.g., including , dependent, independent, and co variates) Data preparation (e.g., coding and feature selection) Reason towards adequate techniques to ensure valid outcomes (e.g., be aware of type I, type II errors) Select an appropriate sampling method (e.g., stratified) Perform parametric tests (e.g., repeated measures (M)ANOVA) Perform non-parametric tests (e.g., Chi-square, Mann-Whitney, and Kruskal-Wallis)",
+    "mainLanguage": "nl-NL",
+    "maxNumberStudents": 200,
+    "enrolledNumberStudents": 150,
+    "pendingNumberStudents": 50,
+    "isLineItem": true,
+    "resultValueType": "10",
+    "ext": {},
+    "modeOfStudy": "full-time",
+    "startDate": "2019-08-24",
+    "endDate": "2019-08-24"
+  },
+  "organization": {
+    "organizationId": "123e4567-e89b-12d3-a456-123514174000",
+    "name": "Coöperatie SURF U.A.",
+    "shortName": "SURF",
+    "description": "SURF is een coöperatieve vereniging van Nederlandse onderwijs- en onderzoeksinstellingen waarin de leden hun krachten bundelen. De leden zijn eigenaar van SURF.",
+    "type": "root",
+    "addresses": [
+      {
+        "type": "postal",
+        "street": "Moreelsepark",
+        "streetNumber": 48,
+        "additional": "On the other side of the road",
+        "postalCode": "3511 EP",
+        "city": "Utrecht",
+        "countryCode": "NL",
+        "geolocation": {
+          "latitude": 52.089123,
+          "longitude": 5.113337
+        },
+        "ext": {}
+      }
+    ],
+    "link": "https://surf.nl",
+    "logo": "https://www.surf.nl/themes/surf/logo.svg",
+    "brin": "00AA",
+    "ext": {}
+  }
+}
