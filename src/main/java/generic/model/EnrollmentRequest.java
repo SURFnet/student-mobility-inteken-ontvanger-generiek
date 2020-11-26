@@ -7,21 +7,25 @@ import org.springframework.util.Assert;
 
 import java.io.Serializable;
 import java.net.URI;
+import java.util.Map;
 
 @NoArgsConstructor
 @Getter
 @Setter
 public class EnrollmentRequest implements Serializable {
 
-    private URI offering;
-    private URI person;
+    private URI offeringURI;
+    private URI personURI;
     private String scope;
     private URI returnTo;
 
+    private String accessToken;
+
     public void validate() {
-        Assert.notNull(offering, "offering is required");
-        Assert.notNull(person, "person is required");
+        Assert.notNull(offeringURI, "offeringURI is required");
+        Assert.notNull(personURI, "personURI is required");
         Assert.notNull(scope, "scope is required");
         Assert.notNull(returnTo, "returnTo is required");
     }
+
 }
