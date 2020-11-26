@@ -2,7 +2,7 @@ logging:
   level:
     root: INFO
     generic: DEBUG
-    org.springframework.security: TRACE
+    org.springframework.security: INFO
 
 server:
   port: 8092
