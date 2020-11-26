@@ -137,7 +137,7 @@ public class EnrollmentEndpoint {
      * Start the actual enrollment based on the data returned in the me endpoint
      */
     @PostMapping("/api/start")
-    public Map<String, Object> start(@RequestHeader("Proxy-Authorization") String authorization) {
+    public Map<String, Object> start(@RequestHeader("X-Correlation-ID") String authorization) {
         String identifier = authorization.substring("Bearer ".length());
         EnrollmentRequest enrollmentRequest = enrollmentRepository.findEnrollmentRequest(identifier);
 
