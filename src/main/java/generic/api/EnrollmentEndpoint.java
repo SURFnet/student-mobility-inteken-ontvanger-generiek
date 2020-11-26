@@ -137,16 +137,15 @@ public class EnrollmentEndpoint {
      * Start the actual enrollment based on the data returned in the me endpoint
      */
     @PostMapping("/api/start")
-    public Map<String, Object> start(@RequestHeader("X-Correlation-ID") String authorization) {
-        String identifier = authorization.substring("Bearer ".length());
-        EnrollmentRequest enrollmentRequest = enrollmentRepository.findEnrollmentRequest(identifier);
+    public Map<String, Object> start(@RequestHeader("X-Correlation-ID") String correlationId) {
+        EnrollmentRequest enrollmentRequest = enrollmentRepository.findEnrollmentRequest(correlationId);
 
         Map<String, Map<String, Object>> body = new HashMap<>();
         body.put("offering", offering(enrollmentRequest));
         body.put("person", person(enrollmentRequest));
 
         //Clean up as this is the last step and individual steps are not idempotent
-        enrollmentRepository.removeEnrollmentRequest(identifier);
+        enrollmentRepository.removeEnrollmentRequest(correlationId);
 
         HttpHeaders httpHeaders = new HttpHeaders();
         httpHeaders.setBasicAuth(backendApiUser, backendApiPassword);
