@@ -147,7 +147,8 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                 .when()
                 .contentType(ContentType.JSON)
                 .accept(ContentType.JSON)
-                .header("Authorization", "Bearer " + state)
+                .auth().basic("user", "secret")
+                .header("Proxy-Authorization", "Bearer " + state)
                 .body(Collections.singletonMap("N/", "A"))
                 .post("/api/start")
                 .as(Map.class);

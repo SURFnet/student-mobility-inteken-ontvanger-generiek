@@ -68,7 +68,7 @@ public class EnrollmentEndpoint {
                               @Value("${backend.url}") URI backendUrl,
                               @Value("${backend.api_user}") String backendApiUser,
                               @Value("${backend.api_password}") String backendApiPassword,
-                              @Value("${broker_url}") String brokerUrl,
+                              @Value("${broker.url}") String brokerUrl,
                               EnrollmentRepository enrollmentRepository) {
         this.acr = acr;
         this.clientId = clientId;
@@ -137,7 +137,7 @@ public class EnrollmentEndpoint {
      * Start the actual enrollment based on the data returned in the me endpoint
      */
     @PostMapping("/api/start")
-    public Map<String, Object> start(@RequestHeader("Authorization") String authorization) {
+    public Map<String, Object> start(@RequestHeader("Proxy-Authorization") String authorization) {
         String identifier = authorization.substring("Bearer ".length());
         EnrollmentRequest enrollmentRequest = enrollmentRepository.findEnrollmentRequest(identifier);
 

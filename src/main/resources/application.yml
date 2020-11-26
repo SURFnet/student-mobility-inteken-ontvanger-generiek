@@ -12,7 +12,11 @@ server:
         secure: true
 
 # URL of the broker-server
-broker_url: "http://localhost:8091/redirect"
+broker:
+  url: "http://localhost:8091/redirect"
+  user: user
+  password: secret
+
 
 # Details on which inteken implementation to call
 backend:
