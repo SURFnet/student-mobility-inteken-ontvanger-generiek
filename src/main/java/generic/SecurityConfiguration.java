@@ -1,45 +1,22 @@
 package generic;
 
-import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
-import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
-import generic.api.EnrollmentEndpoint;
 import generic.mock.MockAuthorizationFilter;
-import generic.model.EnrollmentRequest;
-import generic.model.ExtendedOidcUser;
+import generic.security.AuthorizationRequestCustomizer;
 import generic.security.ExtendedOidcUserService;
 import generic.security.OidcCorsConfigurationSource;
-import org.apache.catalina.Context;
-import org.apache.tomcat.util.http.Rfc6265CookieProcessor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory;
-import org.springframework.boot.web.servlet.server.ServletWebServerFactory;
-import org.springframework.context.annotation.Bean;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
-import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
-import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService;
 import org.springframework.security.oauth2.client.registration.InMemoryClientRegistrationRepository;
-import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
 import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;
-import org.springframework.security.oauth2.core.OAuth2AccessToken;
-import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
-import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.web.authentication.preauth.AbstractPreAuthenticatedProcessingFilter;
-import org.springframework.web.context.request.RequestAttributes;
-import org.springframework.web.context.request.RequestContextHolder;
 
 import java.net.URI;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @EnableWebSecurity
 public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
@@ -70,7 +47,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
     protected void configure(HttpSecurity http) throws Exception {
         DefaultOAuth2AuthorizationRequestResolver authorizationRequestResolver =
                 new DefaultOAuth2AuthorizationRequestResolver(clientRegistrationRepository, "/oauth2/authorization");
-        authorizationRequestResolver.setAuthorizationRequestCustomizer(authorizationRequestCustomizer());
+        authorizationRequestResolver.setAuthorizationRequestCustomizer(new AuthorizationRequestCustomizer(acrValue));
         http.cors().configurationSource(new OidcCorsConfigurationSource())
                 .and()
                 .csrf().disable()
@@ -88,29 +65,4 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
         }
     }
 
-    private Consumer<OAuth2AuthorizationRequest.Builder> authorizationRequestCustomizer() {
-        return customizer -> {
-            Map<String, Object> additionalParameters = new HashMap<>();
-            List<ClaimsSetRequest.Entry> entries = Stream.of(
-                    "eduperson_principal_name",
-                    "eduperson_scoped_affiliation",
-                    "email",
-                    "family_name",
-                    "given_name",
-                    "eduid",
-                    "preferred_username",
-                    "schac_home_organization"
-            ).map(ClaimsSetRequest.Entry::new).collect(Collectors.toList());
-            OIDCClaimsRequest oidcClaimsRequest = new OIDCClaimsRequest().withIDTokenClaimsRequest(new ClaimsSetRequest(entries));
-            //This is the enforce account linking by eduID
-            additionalParameters.put("acr_values", acrValue);
-            //This prevents us from calling the userinfo endpoint
-            additionalParameters.put("claims", oidcClaimsRequest.toJSONString());
-            //Otherwise we stick to oauth2 instead of oidc
-            EnrollmentRequest enrollmentRequest = (EnrollmentRequest) RequestContextHolder.currentRequestAttributes()
-                    .getAttribute(EnrollmentEndpoint.ENROLLMENT_REQUEST_SESSION_KEY, RequestAttributes.SCOPE_SESSION);
-            customizer.scope("openid", enrollmentRequest.getScope());
-            customizer.additionalParameters(additionalParameters);
-        };
-    }
 }

@@ -9,6 +9,8 @@ server:
   servlet:
     session:
       tracking-modes: cookie
+      cookie:
+        secure: true
 
 # Can be relative path in non-develeopment mode
 client_url: "http://localhost:3003/enroll"

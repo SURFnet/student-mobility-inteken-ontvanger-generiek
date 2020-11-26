@@ -1,13 +1,9 @@
 package generic.api;
 
-import io.restassured.RestAssured;
+import generic.AbstractIntegrationTest;
 import io.restassured.filter.session.SessionFilter;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.web.server.LocalServerPort;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -15,23 +11,15 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 
 import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.endsWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED_VALUE;
 
-@ExtendWith(SpringExtension.class)
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-public class EnrollmentEndpointIntegrationTest {
-
-    @LocalServerPort
-    protected int port;
-
-    @BeforeEach
-    public void before() {
-        RestAssured.port = port;
-    }
+@ActiveProfiles(value = "prod", inheritProfiles = false)
+public class EnrollmentEndpointIntegrationTest extends AbstractIntegrationTest {
 
     @Test
-    void oicd() throws UnsupportedEncodingException {
+    void authentication() throws UnsupportedEncodingException {
         SessionFilter sessionFilter = new SessionFilter();
         given().filter(sessionFilter)
                 .when()
@@ -51,6 +39,16 @@ public class EnrollmentEndpointIntegrationTest {
         MultiValueMap<String, String> params = UriComponentsBuilder.fromHttpUrl(location).build().getQueryParams();
         String scope = params.getFirst("scope");
         assertEquals("openid write", URLDecoder.decode(scope, "UTF-8"));
+    }
+
+    @Test
+    void authenticationBeforeFormPost() {
+        given()
+                .redirects().follow(false)
+                .when()
+                .get("/oauth2/authorization/oidc")
+                .then()
+                .header("Location", endsWith("/oauth2/authorization/oidc"));
     }
 
 }
