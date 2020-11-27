@@ -7,6 +7,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * This will only work in a single-node environment. When this application is load-balanced then either the
+ * load-balancer must evaluate the header X-Correlation-ID for stickiness or something like Redis, Mongo or a RDBMS
+ * must be used to store the enrollment data.
+ */
 @Component
 public class EnrollmentRepository {
 

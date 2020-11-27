@@ -11,14 +11,14 @@ server:
       cookie:
         secure: true
 
-# URL of the broker-server
+# URL of the broker-gui to redirect back after authentication and the credentials of the broker-server to check against
 broker:
-  url: "http://localhost:8091/redirect"
+  url: "http://localhost:8091"
   user: user
   password: secret
 
 
-# Details on which inteken implementation to call
+# Details on which inteken implementation to call including credentials
 backend:
   url: "http://localhost:8093/intake"
   api_user: user

@@ -25,6 +25,7 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -70,27 +71,17 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
     @Value("${oidc.authorization-uri}")
     private String authorizationUri;
 
+    @Value("${broker.url}")
+    private String brokerUrl;
 
     @Test
     void fullScenario() throws Exception {
-        MultiValueMap<String, String> authorizeParams = doAuthorize();
-        String scope = authorizeParams.getFirst("scope");
-        assertEquals("openid write", URLDecoder.decode(scope, "UTF-8"));
-
-        String state = authorizeParams.getFirst("state");
-
-        MultiValueMap<String, String> params = doToken(state);
-
-        assertEquals(state, params.getFirst("identifier"));
-        assertEquals("John+Doe", params.getFirst("name"));
-
-        Map result = doStart(state);
-        assertEquals("ok", result.get("result"));
-
-
+        String state = doAuthorize();
+        doToken(state);
+        doStart(state);
     }
 
-    private MultiValueMap<String, String> doAuthorize() {
+    private String doAuthorize() throws UnsupportedEncodingException {
         String location = given().redirects().follow(false)
                 .when()
                 .header("Content-Type", APPLICATION_FORM_URLENCODED_VALUE)
@@ -103,11 +94,13 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
         assertTrue(location.startsWith(authorizationUri));
 
         MultiValueMap<String, String> params = UriComponentsBuilder.fromHttpUrl(location).build().getQueryParams();
-        return params;
+        String scope = params.getFirst("scope");
+        assertEquals("openid write", URLDecoder.decode(scope, "UTF-8"));
+        return params.getFirst("state");
     }
 
 
-    private MultiValueMap<String, String> doToken(String state) throws NoSuchProviderException, NoSuchAlgorithmException, JOSEException, IOException {
+    private void doToken(String state) throws NoSuchProviderException, NoSuchAlgorithmException, JOSEException, IOException {
         String accessToken = accessToken();
         Map<String, String> tokenResult = new HashMap<>();
         tokenResult.put("access_token", accessToken);
@@ -126,11 +119,14 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                 .statusCode(SC_MOVED_TEMPORARILY)
                 .extract()
                 .header("Location");
+        assertTrue(location.startsWith(brokerUrl));
         MultiValueMap<String, String> params = UriComponentsBuilder.fromHttpUrl(location).build().getQueryParams();
-        return params;
+        assertEquals(state, params.getFirst("correlationID"));
+        assertEquals("John+Doe", params.getFirst("name"));
+        assertEquals("true", params.getFirst("next"));
     }
 
-    private Map doStart(String state) throws IOException {
+    private void doStart(String state) throws IOException {
         stubFor(get(urlPathMatching("/offering")).willReturn(aResponse()
                 .withHeader("Content-Type", "application/json")
                 .withBody(readFile("data/offering.json"))));
@@ -143,7 +139,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                 .withHeader("Content-Type", "application/json")
                 .withBody(objectMapper.writeValueAsString(Collections.singletonMap("result", "ok")))));
 
-        return given()
+        Map result = given()
                 .when()
                 .contentType(ContentType.JSON)
                 .accept(ContentType.JSON)
@@ -152,6 +148,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                 .body(Collections.singletonMap("N/", "A"))
                 .post("/api/start")
                 .as(Map.class);
+        assertEquals("ok", result.get("result"));
     }
 
     private String readFile(String path) throws IOException {

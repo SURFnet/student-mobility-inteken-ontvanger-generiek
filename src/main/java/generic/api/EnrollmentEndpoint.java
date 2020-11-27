@@ -130,7 +130,8 @@ public class EnrollmentEndpoint {
         enrollmentRepository.addAccessToken(state, accessToken);
 
         String name = URLEncoder.encode(String.format("%s %s", givenName, familyName), "UTF-8");
-        return new RedirectView(String.format("%s?identifier=%s&name=%s", brokerUrl, state, name), false);
+        String redirect = String.format("%s?next=true&correlationID=%s&name=%s", brokerUrl, state, name);
+        return new RedirectView(redirect, false);
     }
 
     /*
@@ -167,12 +168,14 @@ public class EnrollmentEndpoint {
 
     private String buildAuthorizationURI(String state, EnrollmentRequest enrollmentRequest) {
         Map<String, String> params = new HashMap<>();
+
         List<ClaimsSetRequest.Entry> entries = Stream.of(
                 "family_name",
                 "given_name"
         ).map(ClaimsSetRequest.Entry::new).collect(Collectors.toList());
-        params.put("acr_values", acr);
         params.put("claims", new OIDCClaimsRequest().withIDTokenClaimsRequest(new ClaimsSetRequest(entries)).toJSONString());
+
+        params.put("acr_values", acr);
         params.put("scope", "openid " + enrollmentRequest.getScope());
         params.put("client_id", clientId);
         params.put("response_type", "code");
