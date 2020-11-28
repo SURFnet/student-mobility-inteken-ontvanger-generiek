@@ -24,6 +24,10 @@ backend:
   api_user: user
   api_password: secret
 
+# Clean up enrollmentRequests every 15 minutes
+cron:
+  initialDelayMilliseconds: 900000
+  fixedDelayMilliseconds: 900000
 
 oidc:
   acr-context-class-ref: https://eduid.nl/trust/linked-institution

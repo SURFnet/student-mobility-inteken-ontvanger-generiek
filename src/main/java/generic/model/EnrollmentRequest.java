@@ -7,7 +7,7 @@ import org.springframework.util.Assert;
 
 import java.io.Serializable;
 import java.net.URI;
-import java.util.Map;
+import java.time.Instant;
 
 @NoArgsConstructor
 @Getter
@@ -19,6 +19,7 @@ public class EnrollmentRequest implements Serializable {
     private String scope;
 
     private String accessToken;
+    private Instant created;
 
     public void validate() {
         Assert.notNull(offeringURI, "offeringURI is required");

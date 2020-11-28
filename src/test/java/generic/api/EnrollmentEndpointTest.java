@@ -50,6 +50,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static io.restassured.RestAssured.given;
 import static org.apache.http.HttpStatus.SC_MOVED_TEMPORARILY;
+import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED_VALUE;
@@ -75,6 +76,21 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
     private String brokerUrl;
 
     @Test
+    void expiredEnrollmentRequest()  {
+        given()
+                .when()
+                .contentType(ContentType.JSON)
+                .accept(ContentType.JSON)
+                .auth().basic("user", "secret")
+                .header("X-Correlation-ID", "nope")
+                .body(Collections.singletonMap("N/", "A"))
+                .post("/api/start")
+                .then()
+                .body("error", equalTo("Conflict"))
+                .body("status", equalTo(409))    ;
+    }
+
+    @Test
     void fullScenario() throws Exception {
         String state = doAuthorize();
         doToken(state);
@@ -88,7 +104,6 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                 .param("offeringURI", "http://localhost:8081/offering")
                 .param("personURI", "http://localhost:8081/person")
                 .param("scope", "write")
-                .param("returnTo", "http://localhost:8081")
                 .post("/api/enrollment")
                 .header("Location");
         assertTrue(location.startsWith(authorizationUri));

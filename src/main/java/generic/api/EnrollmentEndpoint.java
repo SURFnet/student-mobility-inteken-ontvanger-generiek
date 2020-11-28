@@ -111,7 +111,6 @@ public class EnrollmentEndpoint {
         map.add("code", code);
         map.add("grant_type", "authorization_code");
         map.add("redirect_uri", redirectUri);
-        map.add("scope", "openid");
 
         HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(map, headers);
 
