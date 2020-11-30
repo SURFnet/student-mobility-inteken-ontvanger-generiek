@@ -13,7 +13,7 @@ server:
 
 # URL of the broker-gui to redirect back after authentication and the credentials of the broker-server to check against
 broker:
-  url: "http://localhost:8091"
+  url: "http://localhost:3003"
   user: user
   password: secret
 

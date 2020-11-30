@@ -14,6 +14,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -129,7 +130,7 @@ public class EnrollmentEndpoint {
         enrollmentRepository.addAccessToken(state, accessToken);
 
         String name = URLEncoder.encode(String.format("%s %s", givenName, familyName), "UTF-8");
-        String redirect = String.format("%s?next=true&correlationID=%s&name=%s", brokerUrl, state, name);
+        String redirect = String.format("%s?step=enroll&correlationID=%s&name=%s", brokerUrl, state, name);
         return new RedirectView(redirect, false);
     }
 
@@ -150,7 +151,8 @@ public class EnrollmentEndpoint {
         HttpHeaders httpHeaders = new HttpHeaders();
         httpHeaders.setBasicAuth(backendApiUser, backendApiPassword);
         HttpEntity<Map<String, Object>> httpEntity = new HttpEntity(body, httpHeaders);
-        return restTemplate.exchange(backendUrl, HttpMethod.POST, httpEntity, mapRef).getBody();
+        ResponseEntity<Map<String, Object>> responseEntity = restTemplate.exchange(backendUrl, HttpMethod.POST, httpEntity, mapRef);
+        return responseEntity.getBody();
     }
 
     private Map<String, Object> offering(EnrollmentRequest enrollmentRequest) {
