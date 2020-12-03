@@ -154,7 +154,10 @@ public class EnrollmentEndpoint {
         } catch (Exception e) {
             //Anti-pattern to catch all, but tolerable in this situation
             LOG.error("Unexpected exception", e);
-            return Collections.singletonMap("code", 500);
+            Map<String, Object> res = new HashMap<>();
+            res.put("message", e.getMessage());
+            res.put("code", 500);
+            return res;
         }
     }
 

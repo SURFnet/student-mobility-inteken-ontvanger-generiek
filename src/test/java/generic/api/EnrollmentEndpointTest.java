@@ -86,8 +86,8 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                 .body(Collections.singletonMap("N/", "A"))
                 .post("/api/start")
                 .then()
-                .body("error", equalTo("Conflict"))
-                .body("status", equalTo(409))    ;
+                .body("message", equalTo("Expired enrollmentRequest"))
+                .body("code", equalTo(500))    ;
     }
 
     @Test
@@ -95,24 +95,6 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
         String state = doAuthorize();
         doToken(state);
         doStart(state);
-    }
-
-    @Test
-    void faultScenario() {
-        Map result = given()
-                .when()
-                .contentType(ContentType.JSON)
-                .accept(ContentType.JSON)
-                .auth().basic("user", "secret")
-                .header("X-Correlation-ID", "bogus")
-                .body(Collections.singletonMap("N/", "A"))
-                .post("/api/start")
-                .then()
-                .statusCode(200)
-                .extract()
-                .as(Map.class);
-        assertEquals(500, result.get("code"));
-
     }
 
     private String doAuthorize() throws UnsupportedEncodingException {
