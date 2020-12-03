@@ -97,6 +97,24 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
         doStart(state);
     }
 
+    @Test
+    void faultScenario() {
+        Map result = given()
+                .when()
+                .contentType(ContentType.JSON)
+                .accept(ContentType.JSON)
+                .auth().basic("user", "secret")
+                .header("X-Correlation-ID", "bogus")
+                .body(Collections.singletonMap("N/", "A"))
+                .post("/api/start")
+                .then()
+                .statusCode(200)
+                .extract()
+                .as(Map.class);
+        assertEquals(500, result.get("code"));
+
+    }
+
     private String doAuthorize() throws UnsupportedEncodingException {
         String location = given().redirects().follow(false)
                 .when()

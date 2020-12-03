@@ -8,6 +8,8 @@ import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import generic.jwt.JWTValidator;
 import generic.model.EnrollmentRequest;
 import generic.repository.EnrollmentRepository;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
@@ -41,6 +43,8 @@ import java.util.stream.Stream;
 
 @RestController
 public class EnrollmentEndpoint {
+
+    private static final Log LOG = LogFactory.getLog(EnrollmentEndpoint.class);
 
     private final String acr;
     private final String clientId;
@@ -94,6 +98,9 @@ public class EnrollmentEndpoint {
         String identifier = enrollmentRepository.addEnrollmentRequest(enrollmentRequest);
         //Start authorization flow
         String authorizationURI = this.buildAuthorizationURI(identifier, enrollmentRequest);
+
+        LOG.debug("Starting authorization for enrollment");
+
         return new RedirectView(authorizationURI);
     }
 
@@ -131,6 +138,9 @@ public class EnrollmentEndpoint {
 
         String name = URLEncoder.encode(String.format("%s %s", givenName, familyName), "UTF-8");
         String redirect = String.format("%s?step=enroll&correlationID=%s&name=%s", brokerUrl, state, name);
+
+        LOG.debug("Redirecting back to client after authorization");
+
         return new RedirectView(redirect, false);
     }
 
@@ -139,6 +149,16 @@ public class EnrollmentEndpoint {
      */
     @PostMapping("/api/start")
     public Map<String, Object> start(@RequestHeader("X-Correlation-ID") String correlationId) {
+        try {
+            return doStart(correlationId);
+        } catch (Exception e) {
+            //Anti-pattern to catch all, but tolerable in this situation
+            LOG.error("Unexpected exception", e);
+            return Collections.singletonMap("code", 500);
+        }
+    }
+
+    private Map<String, Object> doStart(String correlationId) {
         EnrollmentRequest enrollmentRequest = enrollmentRepository.findEnrollmentRequest(correlationId);
 
         Map<String, Map<String, Object>> body = new HashMap<>();
@@ -152,6 +172,9 @@ public class EnrollmentEndpoint {
         httpHeaders.setBasicAuth(backendApiUser, backendApiPassword);
         HttpEntity<Map<String, Object>> httpEntity = new HttpEntity(body, httpHeaders);
         ResponseEntity<Map<String, Object>> responseEntity = restTemplate.exchange(backendUrl, HttpMethod.POST, httpEntity, mapRef);
+
+        LOG.debug("Returning registration result to broker");
+
         return responseEntity.getBody();
     }
 
