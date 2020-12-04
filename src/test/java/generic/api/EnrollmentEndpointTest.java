@@ -137,7 +137,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
         assertTrue(location.startsWith(brokerUrl));
         MultiValueMap<String, String> params = UriComponentsBuilder.fromHttpUrl(location).build().getQueryParams();
         assertEquals(state, params.getFirst("correlationID"));
-        assertEquals("John+Doe", params.getFirst("name"));
+        assertEquals("John", params.getFirst("name"));
         assertEquals("enroll", params.getFirst("step"));
     }
 
