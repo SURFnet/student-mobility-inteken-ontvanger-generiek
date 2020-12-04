@@ -1,12 +1,11 @@
-package generic.repository;
+package generiek.repository;
 
-import generic.model.EnrollmentRequest;
+import generiek.model.EnrollmentRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;

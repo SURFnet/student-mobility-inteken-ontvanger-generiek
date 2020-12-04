@@ -1,13 +1,13 @@
-package generic.api;
+package generiek.api;
 
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
-import generic.jwt.JWTValidator;
-import generic.model.EnrollmentRequest;
-import generic.repository.EnrollmentRepository;
+import generiek.jwt.JWTValidator;
+import generiek.model.EnrollmentRequest;
+import generiek.repository.EnrollmentRepository;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Value;

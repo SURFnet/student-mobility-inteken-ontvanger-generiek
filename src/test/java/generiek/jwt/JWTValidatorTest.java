@@ -1,7 +1,6 @@
-package generic.jwt;
+package generiek.jwt;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.core.io.ClassPathResource;
 
 import java.io.IOException;
 import java.text.ParseException;

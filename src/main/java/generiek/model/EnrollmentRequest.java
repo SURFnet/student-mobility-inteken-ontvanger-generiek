@@ -1,4 +1,4 @@
-package generic.model;
+package generiek.model;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;

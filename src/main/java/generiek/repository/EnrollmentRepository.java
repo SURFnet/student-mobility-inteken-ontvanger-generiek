@@ -1,6 +1,6 @@
-package generic.repository;
+package generiek.repository;
 
-import generic.model.EnrollmentRequest;
+import generiek.model.EnrollmentRequest;
 
 public interface EnrollmentRepository {
 

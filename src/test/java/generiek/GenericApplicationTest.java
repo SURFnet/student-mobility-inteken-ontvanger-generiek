@@ -1,4 +1,4 @@
-package generic;
+package generiek;
 
 import org.junit.jupiter.api.Test;
 

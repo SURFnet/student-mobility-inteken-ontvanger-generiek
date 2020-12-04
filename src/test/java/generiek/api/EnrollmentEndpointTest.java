@@ -1,4 +1,4 @@
-package generic.api;
+package generiek.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.JOSEException;
@@ -11,8 +11,8 @@ import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
-import generic.AbstractIntegrationTest;
-import generic.WireMockExtension;
+import generiek.AbstractIntegrationTest;
+import generiek.WireMockExtension;
 import io.restassured.http.ContentType;
 import org.apache.commons.io.IOUtils;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;

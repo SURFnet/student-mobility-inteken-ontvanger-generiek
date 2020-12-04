@@ -1,4 +1,4 @@
-package generic.jwt;
+package generiek.jwt;
 
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.jwk.source.JWKSource;

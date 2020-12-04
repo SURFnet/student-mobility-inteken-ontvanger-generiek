@@ -1,10 +1,8 @@
-package generic.repository;
+package generiek.repository;
 
-import generic.model.EnrollmentRequest;
+import generiek.model.EnrollmentRequest;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
-import java.net.URISyntaxException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
