@@ -127,16 +127,16 @@ public class EnrollmentEndpoint {
 
         String accessToken = (String) body.get("access_token");
         String idToken = (String) body.get("id_token");
+
         JWKSource<SecurityContext> securityContextJWKSource = jwtValidator.parseKeySet(jwkSetUri);
         jwtValidator.validate(accessToken, securityContextJWKSource);
         JWTClaimsSet claimsSet = jwtValidator.validate(idToken, securityContextJWKSource);
 
         String givenName = claimsSet.getStringClaim("given_name");
-        String familyName = claimsSet.getStringClaim("family_name");
 
         enrollmentRepository.addAccessToken(state, accessToken);
 
-        String name = URLEncoder.encode(String.format("%s %s", givenName, familyName), "UTF-8");
+        String name = URLEncoder.encode(givenName, "UTF-8");
         String redirect = String.format("%s?step=enroll&correlationID=%s&name=%s", brokerUrl, state, name);
 
         LOG.debug("Redirecting back to client after authorization");
