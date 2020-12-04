@@ -3,6 +3,7 @@ package generic.model;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 import org.springframework.util.Assert;
 
 import java.io.Serializable;
@@ -12,6 +13,7 @@ import java.time.Instant;
 @NoArgsConstructor
 @Getter
 @Setter
+@ToString
 public class EnrollmentRequest implements Serializable {
 
     private URI offeringURI;

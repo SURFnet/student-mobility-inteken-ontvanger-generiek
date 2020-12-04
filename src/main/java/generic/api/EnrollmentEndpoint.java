@@ -94,6 +94,8 @@ public class EnrollmentEndpoint {
      */
     @PostMapping(value = "/api/enrollment", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
     public View enrollment(@ModelAttribute EnrollmentRequest enrollmentRequest) {
+        LOG.debug("Received authorization for enrollment request: " + enrollmentRequest.toString());
+
         enrollmentRequest.validate();
         String identifier = enrollmentRepository.addEnrollmentRequest(enrollmentRequest);
         //Start authorization flow
@@ -109,6 +111,8 @@ public class EnrollmentEndpoint {
      */
     @GetMapping("/redirect_uri")
     public View redirect(@RequestParam("code") String code, @RequestParam("state") String state) throws ParseException, UnsupportedEncodingException {
+        LOG.debug("Redirect after authorization called");
+
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
         headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
@@ -162,6 +166,8 @@ public class EnrollmentEndpoint {
     }
 
     private Map<String, Object> doStart(String correlationId) {
+        LOG.debug("Received start registration from broker for correlationId: " + correlationId);
+
         EnrollmentRequest enrollmentRequest = enrollmentRepository.findEnrollmentRequest(correlationId);
 
         Map<String, Map<String, Object>> body = new HashMap<>();
