@@ -86,8 +86,8 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                 .body(Collections.singletonMap("N/", "A"))
                 .post("/api/start")
                 .then()
-                .body("message", equalTo("Expired enrollmentRequest"))
-                .body("code", equalTo(500))    ;
+                .body("status", equalTo(409))    ;
+
     }
 
     @Test

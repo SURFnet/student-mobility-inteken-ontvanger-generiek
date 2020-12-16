@@ -153,19 +153,6 @@ public class EnrollmentEndpoint {
      */
     @PostMapping("/api/start")
     public Map<String, Object> start(@RequestHeader("X-Correlation-ID") String correlationId) {
-        try {
-            return doStart(correlationId);
-        } catch (Exception e) {
-            //Anti-pattern to catch all, but tolerable in this situation
-            LOG.error("Unexpected exception", e);
-            Map<String, Object> res = new HashMap<>();
-            res.put("message", e.getMessage());
-            res.put("code", 500);
-            return res;
-        }
-    }
-
-    private Map<String, Object> doStart(String correlationId) {
         LOG.debug("Received start registration from broker for correlationId: " + correlationId);
 
         EnrollmentRequest enrollmentRequest = enrollmentRepository.findEnrollmentRequest(correlationId);
