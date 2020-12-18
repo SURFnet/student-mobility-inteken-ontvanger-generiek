@@ -22,6 +22,7 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -152,13 +153,15 @@ public class EnrollmentEndpoint {
      * Start the actual enrollment based on the data returned in the me endpoint
      */
     @PostMapping("/api/start")
-    public Map<String, Object> start(@RequestHeader("X-Correlation-ID") String correlationId) {
+    public Map<String, Object> start(
+            @RequestHeader("X-Correlation-ID") String correlationId,
+            @RequestBody Map<String, Object> offering) {
         LOG.debug("Received start registration from broker for correlationId: " + correlationId);
 
         EnrollmentRequest enrollmentRequest = enrollmentRepository.findEnrollmentRequest(correlationId);
 
         Map<String, Map<String, Object>> body = new HashMap<>();
-        body.put("offering", offering(enrollmentRequest));
+        body.put("offering", offering);
         body.put("person", person(enrollmentRequest));
 
         //Clean up as this is the last step and individual steps are not idempotent
@@ -172,10 +175,6 @@ public class EnrollmentEndpoint {
         LOG.debug("Returning registration result to broker");
 
         return responseEntity.getBody();
-    }
-
-    private Map<String, Object> offering(EnrollmentRequest enrollmentRequest) {
-        return restTemplate.exchange(enrollmentRequest.getOfferingURI(), HttpMethod.GET, null, mapRef).getBody();
     }
 
     private Map<String, Object> person(EnrollmentRequest enrollmentRequest) {

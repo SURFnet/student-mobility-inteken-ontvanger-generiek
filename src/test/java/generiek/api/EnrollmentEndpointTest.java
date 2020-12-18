@@ -134,17 +134,16 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                 .statusCode(SC_MOVED_TEMPORARILY)
                 .extract()
                 .header("Location");
-        assertTrue(location.startsWith(brokerUrl));
         MultiValueMap<String, String> params = UriComponentsBuilder.fromHttpUrl(location).build().getQueryParams();
+
+        assertTrue(location.startsWith(brokerUrl));
         assertEquals(state, params.getFirst("correlationID"));
         assertEquals("John", params.getFirst("name"));
         assertEquals("enroll", params.getFirst("step"));
     }
 
     private void doStart(String state) throws IOException {
-        stubFor(get(urlPathMatching("/offering")).willReturn(aResponse()
-                .withHeader("Content-Type", "application/json")
-                .withBody(readFile("data/offering.json"))));
+        String offering = readFile("data/offering.json");
 
         stubFor(get(urlPathMatching("/person")).willReturn(aResponse()
                 .withHeader("Content-Type", "application/json")
@@ -160,7 +159,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                 .accept(ContentType.JSON)
                 .auth().basic("user", "secret")
                 .header("X-Correlation-ID", state)
-                .body(Collections.singletonMap("N/", "A"))
+                .body(offering)
                 .post("/api/start")
                 .as(Map.class);
         assertEquals("ok", result.get("result"));

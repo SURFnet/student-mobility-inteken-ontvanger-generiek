@@ -16,7 +16,6 @@ import java.time.Instant;
 @ToString
 public class EnrollmentRequest implements Serializable {
 
-    private URI offeringURI;
     private URI personURI;
     private String scope;
 
@@ -24,7 +23,6 @@ public class EnrollmentRequest implements Serializable {
     private Instant created;
 
     public void validate() {
-        Assert.notNull(offeringURI, "offeringURI is required");
         Assert.notNull(personURI, "personURI is required");
         Assert.notNull(scope, "scope is required");
     }
