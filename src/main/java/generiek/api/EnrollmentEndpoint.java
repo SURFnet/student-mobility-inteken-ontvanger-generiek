@@ -137,11 +137,19 @@ public class EnrollmentEndpoint {
         jwtValidator.validate(accessToken, securityContextJWKSource);
         JWTClaimsSet claimsSet = jwtValidator.validate(idToken, securityContextJWKSource);
 
-        String givenName = claimsSet.getStringClaim("given_name");
+        String givenName = null;
+        String name = null;
+        
+        try {
+        	givenName = claimsSet.getStringClaim("given_name");
+        	name = URLEncoder.encode(givenName, "UTF-8");
+        } catch (Exception e) {
+        	LOG.error("No given_name in claim set");
+        	throw e;
+        }
 
         enrollmentRepository.addAccessToken(state, accessToken);
-
-        String name = URLEncoder.encode(givenName, "UTF-8");
+        
         String redirect = String.format("%s?step=enroll&correlationID=%s&name=%s", brokerUrl, state, name);
 
         LOG.debug("Redirecting back to client after authorization");
