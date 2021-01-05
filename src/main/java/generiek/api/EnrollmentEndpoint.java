@@ -182,6 +182,7 @@ public class EnrollmentEndpoint {
         httpHeaders.add("Accept", "application/json, application/json;charset=UTF-8");
         httpHeaders.add("Authorization", "Bearer " + enrollmentRequest.getAccessToken());
         HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(httpHeaders);
+        LOG.debug("Retrieve person information from : " + enrollmentRequest.getPersonURI());
         return restTemplate.exchange(enrollmentRequest.getPersonURI(), HttpMethod.GET, requestEntity, mapRef).getBody();
     }
 
