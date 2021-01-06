@@ -19,6 +19,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -137,22 +138,15 @@ public class EnrollmentEndpoint {
         jwtValidator.validate(accessToken, securityContextJWKSource);
         JWTClaimsSet claimsSet = jwtValidator.validate(idToken, securityContextJWKSource);
 
-        String givenName = null;
-        String name = null;
-        
-        try {
-        	givenName = claimsSet.getStringClaim("given_name");
-        	name = URLEncoder.encode(givenName, "UTF-8");
-        } catch (Exception e) {
-        	LOG.error("No given_name in claim set");
-        	throw e;
+        String givenName = claimsSet.getStringClaim("given_name");
+        if (!StringUtils.hasText(givenName)) {
+            throw new IllegalArgumentException("No given_name in claim set");
         }
-
+        givenName = URLEncoder.encode(givenName, "UTF-8");
         enrollmentRepository.addAccessToken(state, accessToken);
-        
-        String redirect = String.format("%s?step=enroll&correlationID=%s&name=%s", brokerUrl, state, name);
+        String redirect = String.format("%s?step=enroll&correlationID=%s&name=%s", brokerUrl, state, givenName);
 
-        LOG.debug("Redirecting back to client after authorization");
+        LOG.debug(String.format("Redirecting back to %s client after authorization", redirect));
 
         return new RedirectView(redirect, false);
     }
