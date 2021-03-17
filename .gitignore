@@ -1,0 +1,11 @@
+.idea
+*.iml
+bundle*
+node_modules
+target
+index.html
+TODO.txt
+.classpath
+.project
+.settings/
+database/

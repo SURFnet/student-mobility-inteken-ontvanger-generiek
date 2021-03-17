@@ -119,6 +119,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
         String accessToken = accessToken();
         Map<String, String> tokenResult = new HashMap<>();
         tokenResult.put("access_token", accessToken);
+        tokenResult.put("refresh_token", accessToken);
         tokenResult.put("id_token", accessToken);
 
         stubFor(post(urlPathMatching("/oidc/token")).willReturn(aResponse()

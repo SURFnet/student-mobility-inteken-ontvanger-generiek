@@ -1,14 +1,18 @@
 package generiek.repository;
 
 import generiek.model.EnrollmentRequest;
+import org.springframework.data.repository.CrudRepository;
+import org.springframework.stereotype.Repository;
 
-public interface EnrollmentRepository {
+import java.util.Optional;
 
-    String addEnrollmentRequest(EnrollmentRequest enrollmentRequest);
+/**
+ * This will only work in a single-node environment. When this application is load-balanced then we need to
+ * store the enrollment data in a distributed database like MySQL or PostgreSQL.
+ */
+@Repository
+public interface EnrollmentRepository extends CrudRepository<EnrollmentRequest, Long> {
 
-    EnrollmentRequest findEnrollmentRequest(String identifier);
+    Optional<EnrollmentRequest> findByIdentifier(String identifier);
 
-    void addAccessToken(String identifier, String accessToken);
-
-    void removeEnrollmentRequest(String identifier);
 }

@@ -8,6 +8,7 @@ import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import generiek.jwt.JWTValidator;
 import generiek.model.EnrollmentRequest;
 import generiek.repository.EnrollmentRepository;
+import generiek.repository.ExpiredEnrollmentRequestException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -97,9 +98,10 @@ public class EnrollmentEndpoint {
     @PostMapping(value = "/api/enrollment", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
     public View enrollment(@ModelAttribute EnrollmentRequest enrollmentRequest) {
         LOG.debug("Received authorization for enrollment request: " + enrollmentRequest.toString());
-
-        enrollmentRequest.validate();
-        String identifier = enrollmentRepository.addEnrollmentRequest(enrollmentRequest);
+        // Prevent forgery and cherry-pick attributes
+        enrollmentRequest = new EnrollmentRequest(enrollmentRequest);
+        enrollmentRepository.save(enrollmentRequest);
+        String identifier = enrollmentRequest.getIdentifier();
         //Start authorization flow
         String authorizationURI = this.buildAuthorizationURI(identifier, enrollmentRequest);
 
@@ -132,6 +134,7 @@ public class EnrollmentEndpoint {
         }).getBody();
 
         String accessToken = (String) body.get("access_token");
+        String refreshToken = (String) body.get("refresh_token");
         String idToken = (String) body.get("id_token");
 
         JWKSource<SecurityContext> securityContextJWKSource = jwtValidator.parseKeySet(jwkSetUri);
@@ -143,7 +146,13 @@ public class EnrollmentEndpoint {
             throw new IllegalArgumentException("No given_name in claim set");
         }
         givenName = URLEncoder.encode(givenName, "UTF-8");
-        enrollmentRepository.addAccessToken(state, accessToken);
+        EnrollmentRequest enrollmentRequest = enrollmentRepository.findByIdentifier(state)
+                .orElseThrow(ExpiredEnrollmentRequestException::new);
+
+        enrollmentRequest.setAccessToken(accessToken);
+        enrollmentRequest.setRefreshToken(refreshToken);
+        enrollmentRepository.save(enrollmentRequest);
+
         String redirect = String.format("%s?step=enroll&correlationID=%s&name=%s", brokerUrl, state, givenName);
 
         LOG.debug(String.format("Redirecting back to %s client after authorization", redirect));
@@ -160,14 +169,18 @@ public class EnrollmentEndpoint {
             @RequestBody Map<String, Object> offering) {
         LOG.debug("Received start registration from broker for correlationId: " + correlationId);
 
-        EnrollmentRequest enrollmentRequest = enrollmentRepository.findEnrollmentRequest(correlationId);
+        EnrollmentRequest enrollmentRequest = enrollmentRepository.findByIdentifier(correlationId)
+                .orElseThrow(ExpiredEnrollmentRequestException::new);
 
         Map<String, Map<String, Object>> body = new HashMap<>();
         body.put("offering", offering);
-        body.put("person", person(enrollmentRequest));
+        Map<String, Object> personMap = person(enrollmentRequest);
+        body.put("person", personMap);
 
-        //Clean up as this is the last step and individual steps are not idempotent
-        enrollmentRepository.removeEnrollmentRequest(correlationId);
+        //Save the offering, person and refreshToken in a persistent DB
+        enrollmentRequest.setOfferingId((String) offering.get("offeringId"));
+        enrollmentRequest.setPersonId((String) personMap.get("personId"));
+        enrollmentRepository.save(enrollmentRequest);
 
         HttpHeaders httpHeaders = new HttpHeaders();
         httpHeaders.setBasicAuth(backendApiUser, backendApiPassword);

@@ -11,6 +11,16 @@ server:
       cookie:
         secure: true
 
+spring:
+  jpa:
+    properties:
+      hibernate:
+        naming-strategy: org.hibernate.cfg.ImprovedNamingStrategy
+        dialect: org.hibernate.dialect.H2Dialect
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:file:./database/student-mobility
+
 # URL of the broker-gui to redirect back after authentication and the credentials of the broker-server to check against
 broker:
   url: "http://localhost:3003"
