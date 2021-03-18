@@ -27,8 +27,12 @@ broker:
   user: user
   password: secret
 
+# Credentials of the SIS (e.g. Osiris) to check against when reporting back results
+sis:
+  user: sis
+  password: secret
 
-# Details on which inteken implementation to call including credentials
+# Details on which custom inteken implementation to call including credentials
 backend:
   url: "http://localhost:8093/intake"
   api_user: user

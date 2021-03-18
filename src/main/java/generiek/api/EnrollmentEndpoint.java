@@ -7,6 +7,7 @@ import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import generiek.jwt.JWTValidator;
 import generiek.model.EnrollmentRequest;
+import generiek.ooapi.EnrollmentResult;
 import generiek.repository.EnrollmentRepository;
 import generiek.repository.ExpiredEnrollmentRequestException;
 import org.apache.commons.logging.Log;
@@ -117,10 +118,6 @@ public class EnrollmentEndpoint {
     public View redirect(@RequestParam("code") String code, @RequestParam("state") String state) throws ParseException, UnsupportedEncodingException {
         LOG.debug("Redirect after authorization called");
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-        headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
-
         MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
         map.add("client_id", clientId);
         map.add("client_secret", clientSecret);
@@ -128,10 +125,7 @@ public class EnrollmentEndpoint {
         map.add("grant_type", "authorization_code");
         map.add("redirect_uri", redirectUri);
 
-        HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(map, headers);
-
-        Map<String, Object> body = restTemplate.exchange(tokenUri, HttpMethod.POST, request, new ParameterizedTypeReference<Map<String, Object>>() {
-        }).getBody();
+        Map<String, Object> body = tokenRequest(map);
 
         String accessToken = (String) body.get("access_token");
         String refreshToken = (String) body.get("refresh_token");
@@ -142,10 +136,10 @@ public class EnrollmentEndpoint {
         JWTClaimsSet claimsSet = jwtValidator.validate(idToken, securityContextJWKSource);
 
         String givenName = claimsSet.getStringClaim("given_name");
-        if (!StringUtils.hasText(givenName)) {
-            throw new IllegalArgumentException("No given_name in claim set");
-        }
+        //Very unlikely and why break on this?
+        givenName = StringUtils.hasText(givenName) ? givenName : "Mystery guest";
         givenName = URLEncoder.encode(givenName, "UTF-8");
+
         EnrollmentRequest enrollmentRequest = enrollmentRepository.findByIdentifier(state)
                 .orElseThrow(ExpiredEnrollmentRequestException::new);
 
@@ -158,6 +152,17 @@ public class EnrollmentEndpoint {
         LOG.debug(String.format("Redirecting back to %s client after authorization", redirect));
 
         return new RedirectView(redirect, false);
+    }
+
+    private Map<String, Object> tokenRequest(MultiValueMap<String, String> map) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+
+        HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(map, headers);
+
+        return restTemplate.exchange(tokenUri, HttpMethod.POST, request, new ParameterizedTypeReference<Map<String, Object>>() {
+        }).getBody();
     }
 
     /*
@@ -192,13 +197,61 @@ public class EnrollmentEndpoint {
         return responseEntity.getBody();
     }
 
+    /*
+     * Called by the SIS of the guest institution to report back results that need to be send with oauth secured
+     * to the home institution
+     */
+    @PostMapping("/api/results")
+    public ResponseEntity<Void> results(@RequestBody Map<String, Object> results) {
+        String offeringId = (String) results.get("offeringId");
+        String personId = (String) results.get("personId");
+
+        LOG.debug(String.format("Report back results endpoint called by SIS with offeringId %s and personId %s", offeringId, personId));
+
+        EnrollmentRequest enrollmentRequest = enrollmentRepository.findByOfferingIdAndPersonId(offeringId, personId)
+                .orElseThrow(ExpiredEnrollmentRequestException::new);
+
+        MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
+        map.add("client_id", clientId);
+        map.add("client_secret", clientSecret);
+        map.add("grant_type", "refresh_token");
+        map.add("refresh_token", enrollmentRequest.getRefreshToken());
+
+        LOG.debug("Obtaining new accessToken with saved refreshToken");
+
+        Map<String, Object> oidcResponse = tokenRequest(map);
+
+        String accessToken = (String) oidcResponse.get("access_token");
+        String resultsURI = enrollmentRequest.getResultsURI();
+
+        //Now call the actual OOAPI endpoint with the new accessToken
+        LOG.debug(String.format("Posting back results endpoint with offeringId %s and personId %s to %s", offeringId, personId, resultsURI));
+
+        HttpHeaders httpHeaders = getOidcAuthorizationHttpHeaders(accessToken);
+        Map<String, Object> body = new EnrollmentResult(results).transform();
+        HttpEntity<Void> requestEntity = new HttpEntity(body, httpHeaders);
+
+        ResponseEntity<Void> exchanged = restTemplate.exchange(resultsURI, HttpMethod.POST, requestEntity, Void.class);
+
+        LOG.debug(String.format("Received answer from %s with status %s", resultsURI, exchanged.getStatusCode()));
+
+        return exchanged;
+    }
+
     private Map<String, Object> person(EnrollmentRequest enrollmentRequest) {
+        HttpHeaders httpHeaders = getOidcAuthorizationHttpHeaders(enrollmentRequest.getAccessToken());
+        HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(httpHeaders);
+
+        LOG.debug("Retrieve person information from : " + enrollmentRequest.getPersonURI());
+
+        return restTemplate.exchange(enrollmentRequest.getPersonURI(), HttpMethod.GET, requestEntity, mapRef).getBody();
+    }
+
+    private HttpHeaders getOidcAuthorizationHttpHeaders(String accessToken) {
         HttpHeaders httpHeaders = new HttpHeaders();
         httpHeaders.add("Accept", "application/json, application/json;charset=UTF-8");
-        httpHeaders.add("Authorization", "Bearer " + enrollmentRequest.getAccessToken());
-        HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(httpHeaders);
-        LOG.debug("Retrieve person information from : " + enrollmentRequest.getPersonURI());
-        return restTemplate.exchange(enrollmentRequest.getPersonURI(), HttpMethod.GET, requestEntity, mapRef).getBody();
+        httpHeaders.add("Authorization", "Bearer " + accessToken);
+        return httpHeaders;
     }
 
     private String buildAuthorizationURI(String state, EnrollmentRequest enrollmentRequest) {

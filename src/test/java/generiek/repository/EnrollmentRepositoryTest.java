@@ -20,6 +20,7 @@ class EnrollmentRepositoryTest {
         EnrollmentRequest enrollmentRequest = new EnrollmentRequest();
         enrollmentRequest.setOfferingId("forgery");
         enrollmentRequest.setPersonURI("https://www.test.org");
+        enrollmentRequest.setResultsURI("https://www.test.org");
         enrollmentRequest.setScope("inteken");
 
         enrollmentRequest = new EnrollmentRequest(enrollmentRequest);

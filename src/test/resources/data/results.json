@@ -1,0 +1,27 @@
+{
+  "type": "courseOfferingAssociation",
+  "role": "student",
+  "state": "associated",
+  "ext": {
+    "issuer": {
+      "organization": {
+        "name": "tue",
+        "address": {
+          "countryCode": "NL"
+        }
+      },
+      "offering": {
+        "abbreviation": "I2BIO_3",
+        "name": "Introduction to Biolog",
+        "resultValueType": "1-10"
+      }
+    }
+  },
+  "result": {
+    "state": "completed",
+    "score": "8",
+    "resultDate": "2020-09-28T00:00:00.000Z",
+    "ects": "6",
+    "comment": "goed gedaan!"
+  }
+}

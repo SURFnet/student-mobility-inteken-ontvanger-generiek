@@ -15,4 +15,6 @@ public interface EnrollmentRepository extends CrudRepository<EnrollmentRequest, 
 
     Optional<EnrollmentRequest> findByIdentifier(String identifier);
 
+    Optional<EnrollmentRequest> findByOfferingIdAndPersonId(String offeringId, String personId);
+
 }

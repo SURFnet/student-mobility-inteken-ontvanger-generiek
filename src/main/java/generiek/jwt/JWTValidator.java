@@ -15,15 +15,14 @@ import java.net.URL;
 
 public class JWTValidator {
 
-    private ConfigurableJWTProcessor<SecurityContext> jwtProcessor = new DefaultJWTProcessor<>();
+    private final ConfigurableJWTProcessor<SecurityContext> jwtProcessor = new DefaultJWTProcessor<>();
 
     @SneakyThrows
-    public JWTClaimsSet validate(String accessToken, JWKSource<SecurityContext> keySource) {
-        JWSAlgorithm expectedJWSAlg = JWSAlgorithm.RS256;
+    public JWTClaimsSet validate(String jwtToken, JWKSource<SecurityContext> keySource) {
         JWSKeySelector<SecurityContext> keySelector =
-                new JWSVerificationKeySelector<>(expectedJWSAlg, keySource);
+                new JWSVerificationKeySelector<>(JWSAlgorithm.RS256, keySource);
         jwtProcessor.setJWSKeySelector(keySelector);
-        return jwtProcessor.process(accessToken, null);
+        return jwtProcessor.process(jwtToken, null);
     }
 
     @SneakyThrows

@@ -32,6 +32,9 @@ public class EnrollmentRequest implements Serializable {
     @Column(name = "person_uri")
     private String personURI;
 
+    @Column(name = "results_uri")
+    private String resultsURI;
+
     @Column
     private String personId;
 
@@ -53,13 +56,15 @@ public class EnrollmentRequest implements Serializable {
     public EnrollmentRequest(EnrollmentRequest enrollmentRequest) {
         validate(enrollmentRequest);
         this.personURI = enrollmentRequest.personURI;
+        this.resultsURI = enrollmentRequest.resultsURI;
         this.scope = enrollmentRequest.scope;
-        this.identifier = UUID.randomUUID().toString();
-        this.created = Instant.now();
+        this.setIdentifier(UUID.randomUUID().toString());
+        this.setCreated(Instant.now());
     }
 
     private void validate(EnrollmentRequest enrollmentRequest) {
         Assert.notNull(enrollmentRequest.personURI, "personURI is required");
+        Assert.notNull(enrollmentRequest.resultsURI, "resultsURI is required");
         Assert.notNull(enrollmentRequest.scope, "scope is required");
     }
 

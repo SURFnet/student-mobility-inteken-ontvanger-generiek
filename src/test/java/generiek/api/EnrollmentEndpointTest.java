@@ -13,6 +13,7 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import generiek.AbstractIntegrationTest;
 import generiek.WireMockExtension;
+import generiek.model.EnrollmentRequest;
 import io.restassured.http.ContentType;
 import org.apache.commons.io.IOUtils;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -76,7 +77,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
     private String brokerUrl;
 
     @Test
-    void expiredEnrollmentRequest()  {
+    void expiredEnrollmentRequest() {
         given()
                 .when()
                 .contentType(ContentType.JSON)
@@ -86,7 +87,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                 .body(Collections.singletonMap("N/", "A"))
                 .post("/api/start")
                 .then()
-                .body("status", equalTo(409))    ;
+                .body("status", equalTo(409));
 
     }
 
@@ -95,14 +96,15 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
         String state = doAuthorize();
         doToken(state);
         doStart(state);
+        doReportBackResults(state);
     }
 
     private String doAuthorize() throws UnsupportedEncodingException {
         String location = given().redirects().follow(false)
                 .when()
                 .header("Content-Type", APPLICATION_FORM_URLENCODED_VALUE)
-                .param("offeringURI", "http://localhost:8081/offering")
                 .param("personURI", "http://localhost:8081/person")
+                .param("resultsURI", "http://localhost:8081/results")
                 .param("scope", "write")
                 .post("/api/enrollment")
                 .header("Location");
@@ -164,6 +166,34 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                 .post("/api/start")
                 .as(Map.class);
         assertEquals("ok", result.get("result"));
+    }
+
+    private void doReportBackResults(String state) throws IOException, NoSuchAlgorithmException, JOSEException, NoSuchProviderException {
+        Map<String, String> tokenResult = Collections.singletonMap("access_token",UUID.randomUUID().toString());
+
+        stubFor(post(urlPathMatching("/oidc/token")).willReturn(aResponse()
+                .withHeader("Content-Type", "application/json")
+                .withBody(objectMapper.writeValueAsString(tokenResult))));
+
+        stubFor(post(urlPathMatching("/results")).willReturn(aResponse()
+                .withHeader("Content-Type", "application/json")
+                .withStatus(200)));
+
+        EnrollmentRequest enrollmentRequest = enrollmentRepository.findByIdentifier(state).get();
+        Map<String, Object> results = objectMapper.readValue(readFile("data/results.json"), Map.class);
+        results.put("offeringId", enrollmentRequest.getOfferingId());
+        results.put("personId", enrollmentRequest.getPersonId());
+
+        given()
+                .when()
+                .contentType(ContentType.JSON)
+                .accept(ContentType.JSON)
+                .auth().basic("sis", "secret")
+                .body(results)
+                .post("/api/results")
+                .then()
+                .statusCode(200);
+
     }
 
     private String readFile(String path) throws IOException {
