@@ -5,7 +5,6 @@ CREATE TABLE enrollment_requests
     person_uri    VARCHAR(255) NOT NULL,
     results_uri   VARCHAR(255) NOT NULL,
     person_id     VARCHAR(255),
-    offering_id   VARCHAR(255),
     access_token  MEDIUMTEXT,
     refresh_token MEDIUMTEXT,
     scope         MEDIUMTEXT   NOT NULL,

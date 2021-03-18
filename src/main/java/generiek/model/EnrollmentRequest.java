@@ -39,9 +39,6 @@ public class EnrollmentRequest implements Serializable {
     private String personId;
 
     @Column
-    private String offeringId;
-
-    @Column
     private String accessToken;
 
     @Column

@@ -181,7 +181,6 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
 
         EnrollmentRequest enrollmentRequest = enrollmentRepository.findByIdentifier(state).get();
         Map<String, Object> results = objectMapper.readValue(readFile("data/results.json"), Map.class);
-        results.put("offeringId", enrollmentRequest.getOfferingId());
         results.put("personId", enrollmentRequest.getPersonId());
 
         given()

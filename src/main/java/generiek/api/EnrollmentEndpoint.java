@@ -19,6 +19,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.util.StringUtils;
@@ -182,8 +183,7 @@ public class EnrollmentEndpoint {
         Map<String, Object> personMap = person(enrollmentRequest);
         body.put("person", personMap);
 
-        //Save the offering, person and refreshToken in a persistent DB
-        enrollmentRequest.setOfferingId((String) offering.get("offeringId"));
+        //Save personId and refreshToken in a persistent DB
         enrollmentRequest.setPersonId((String) personMap.get("personId"));
         enrollmentRepository.save(enrollmentRequest);
 
@@ -203,13 +203,15 @@ public class EnrollmentEndpoint {
      */
     @PostMapping("/api/results")
     public ResponseEntity<Void> results(@RequestBody Map<String, Object> results) {
-        String offeringId = (String) results.get("offeringId");
         String personId = (String) results.get("personId");
 
-        LOG.debug(String.format("Report back results endpoint called by SIS with offeringId %s and personId %s", offeringId, personId));
+        LOG.debug(String.format("Report back results endpoint called by SIS personId %s", personId));
 
-        EnrollmentRequest enrollmentRequest = enrollmentRepository.findByOfferingIdAndPersonId(offeringId, personId)
-                .orElseThrow(ExpiredEnrollmentRequestException::new);
+        List<EnrollmentRequest> enrollmentRequests = enrollmentRepository.findByPersonIdOrderByCreatedDesc(personId);
+        if (CollectionUtils.isEmpty(enrollmentRequests)) {
+            throw new ExpiredEnrollmentRequestException();
+        }
+        EnrollmentRequest enrollmentRequest = enrollmentRequests.get(0);
 
         MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
         map.add("client_id", clientId);
@@ -225,7 +227,7 @@ public class EnrollmentEndpoint {
         String resultsURI = enrollmentRequest.getResultsURI();
 
         //Now call the actual OOAPI endpoint with the new accessToken
-        LOG.debug(String.format("Posting back results endpoint with offeringId %s and personId %s to %s", offeringId, personId, resultsURI));
+        LOG.debug(String.format("Posting back results endpoint with personId %s to %s", personId, resultsURI));
 
         HttpHeaders httpHeaders = getOidcAuthorizationHttpHeaders(accessToken);
         Map<String, Object> body = new EnrollmentResult(results).transform();
@@ -234,7 +236,8 @@ public class EnrollmentEndpoint {
         ResponseEntity<Void> exchanged = restTemplate.exchange(resultsURI, HttpMethod.POST, requestEntity, Void.class);
 
         LOG.debug(String.format("Received answer from %s with status %s", resultsURI, exchanged.getStatusCode()));
-
+        //cleanup
+        enrollmentRepository.deleteAll(enrollmentRequests);
         return exchanged;
     }
 
