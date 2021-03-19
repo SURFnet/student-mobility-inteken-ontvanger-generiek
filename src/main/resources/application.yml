@@ -21,6 +21,10 @@ spring:
     driver-class-name: org.h2.Driver
     url: jdbc:h2:file:./database/student-mobility
 
+features:
+  # Do we allow to mock the different scenario's - only allow on test
+  allow_playground: True
+
 # URL of the broker-gui to redirect back after authentication and the credentials of the broker-server to check against
 broker:
   url: "http://localhost:3003"

@@ -17,6 +17,7 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.CollectionUtils;
@@ -30,6 +31,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.View;
 import org.springframework.web.servlet.view.RedirectView;
@@ -62,8 +64,10 @@ public class EnrollmentEndpoint {
     private final String backendApiUser;
     private final String backendApiPassword;
     private final String brokerUrl;
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final boolean allowPlayground;
     private final EnrollmentRepository enrollmentRepository;
+
+    private final RestTemplate restTemplate = new RestTemplate();
     private final ParameterizedTypeReference<Map<String, Object>> mapRef = new ParameterizedTypeReference<Map<String, Object>>() {
     };
     private final JWTValidator jwtValidator = new JWTValidator();
@@ -79,6 +83,7 @@ public class EnrollmentEndpoint {
                               @Value("${backend.api_user}") String backendApiUser,
                               @Value("${backend.api_password}") String backendApiPassword,
                               @Value("${broker.url}") String brokerUrl,
+                              @Value("${features.allow_playground}") boolean allowPlayground,
                               EnrollmentRepository enrollmentRepository) {
         this.acr = acr;
         this.clientId = clientId;
@@ -92,6 +97,7 @@ public class EnrollmentEndpoint {
         this.backendApiPassword = backendApiPassword;
         this.brokerUrl = brokerUrl;
         this.enrollmentRepository = enrollmentRepository;
+        this.allowPlayground = allowPlayground;
     }
 
     /*
@@ -195,6 +201,20 @@ public class EnrollmentEndpoint {
         LOG.debug("Returning registration result to broker");
 
         return responseEntity.getBody();
+    }
+
+    /*
+     * Called by the Broker on behalf of the test user
+     */
+    @PostMapping("/api/play-results")
+    public ResponseEntity<Void> playResults(@RequestHeader("X-Correlation-ID") String correlationId, @RequestBody Map<String, Object> results) {
+        if (!allowPlayground) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        EnrollmentRequest enrollmentRequest = enrollmentRepository.findByIdentifier(correlationId).orElseThrow(ExpiredEnrollmentRequestException::new);
+        Map<String, Object> newResults = new HashMap<>(results);
+        newResults.put("personId", enrollmentRequest.getPersonId());
+        return this.results(newResults);
     }
 
     /*

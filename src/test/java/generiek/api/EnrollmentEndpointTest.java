@@ -88,7 +88,19 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                 .post("/api/start")
                 .then()
                 .body("status", equalTo(409));
+    }
 
+    @Test
+    void expiredEnrollmentRequestInResults() {
+        given()
+                .when()
+                .contentType(ContentType.JSON)
+                .accept(ContentType.JSON)
+                .auth().basic("sis", "secret")
+                .body(Collections.singletonMap("N/", "A"))
+                .post("/api/results")
+                .then()
+                .body("status", equalTo(409));
     }
 
     @Test
@@ -97,6 +109,14 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
         doToken(state);
         doStart(state);
         doReportBackResults(state);
+    }
+
+    @Test
+    void fullScenarioWithPlay() throws Exception {
+        String state = doAuthorize();
+        doToken(state);
+        doStart(state);
+        doPlayReportBackResults(state);
     }
 
     private String doAuthorize() throws UnsupportedEncodingException {
@@ -192,7 +212,31 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                 .post("/api/results")
                 .then()
                 .statusCode(200);
+    }
 
+    private void doPlayReportBackResults(String state) throws IOException, NoSuchAlgorithmException, JOSEException, NoSuchProviderException {
+        Map<String, String> tokenResult = Collections.singletonMap("access_token",UUID.randomUUID().toString());
+
+        stubFor(post(urlPathMatching("/oidc/token")).willReturn(aResponse()
+                .withHeader("Content-Type", "application/json")
+                .withBody(objectMapper.writeValueAsString(tokenResult))));
+
+        stubFor(post(urlPathMatching("/results")).willReturn(aResponse()
+                .withHeader("Content-Type", "application/json")
+                .withStatus(200)));
+
+        Map<String, Object> results = objectMapper.readValue(readFile("data/results.json"), Map.class);
+
+        given()
+                .when()
+                .contentType(ContentType.JSON)
+                .accept(ContentType.JSON)
+                .header("X-Correlation-ID", state)
+                .auth().basic("sis", "secret")
+                .body(results)
+                .post("/api/play-results")
+                .then()
+                .statusCode(200);
     }
 
     private String readFile(String path) throws IOException {
