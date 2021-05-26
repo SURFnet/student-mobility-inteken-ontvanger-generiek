@@ -36,7 +36,7 @@ public class EnrollmentRequest implements Serializable {
     private String resultsURI;
 
     @Column
-    private String personId;
+    private String eduid;
 
     @Column
     private String accessToken;

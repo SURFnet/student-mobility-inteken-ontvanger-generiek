@@ -31,7 +31,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.View;
 import org.springframework.web.servlet.view.RedirectView;
@@ -147,9 +146,14 @@ public class EnrollmentEndpoint {
         givenName = StringUtils.hasText(givenName) ? givenName : "Mystery guest";
         givenName = URLEncoder.encode(givenName, "UTF-8");
 
+        String eduid = claimsSet.getStringClaim("eduid");
+        if (!StringUtils.hasText(eduid)) {
+            throw new IllegalArgumentException("eduid is required. Check the ARP for RP:" + this.clientId);
+        }
+
         EnrollmentRequest enrollmentRequest = enrollmentRepository.findByIdentifier(state)
                 .orElseThrow(ExpiredEnrollmentRequestException::new);
-
+        enrollmentRequest.setEduid(eduid);
         enrollmentRequest.setAccessToken(accessToken);
         enrollmentRequest.setRefreshToken(refreshToken);
         enrollmentRepository.save(enrollmentRequest);
@@ -187,11 +191,8 @@ public class EnrollmentEndpoint {
         Map<String, Map<String, Object>> body = new HashMap<>();
         body.put("offering", offering);
         Map<String, Object> personMap = person(enrollmentRequest);
+        personMap.put("personId", enrollmentRequest.getEduid());
         body.put("person", personMap);
-
-        //Save personId and refreshToken in a persistent DB
-        enrollmentRequest.setPersonId((String) personMap.get("personId"));
-        enrollmentRepository.save(enrollmentRequest);
 
         HttpHeaders httpHeaders = new HttpHeaders();
         httpHeaders.setBasicAuth(backendApiUser, backendApiPassword);
@@ -213,7 +214,7 @@ public class EnrollmentEndpoint {
         }
         EnrollmentRequest enrollmentRequest = enrollmentRepository.findByIdentifier(correlationId).orElseThrow(ExpiredEnrollmentRequestException::new);
         Map<String, Object> newResults = new HashMap<>(results);
-        newResults.put("personId", enrollmentRequest.getPersonId());
+        newResults.put("personId", enrollmentRequest.getEduid());
         return this.results(newResults);
     }
 
@@ -227,7 +228,7 @@ public class EnrollmentEndpoint {
 
         LOG.debug(String.format("Report back results endpoint called by SIS personId %s", personId));
 
-        List<EnrollmentRequest> enrollmentRequests = enrollmentRepository.findByPersonIdOrderByCreatedDesc(personId);
+        List<EnrollmentRequest> enrollmentRequests = enrollmentRepository.findByEduidOrderByCreatedDesc(personId);
         if (CollectionUtils.isEmpty(enrollmentRequests)) {
             throw new ExpiredEnrollmentRequestException();
         }
@@ -282,7 +283,8 @@ public class EnrollmentEndpoint {
 
         List<ClaimsSetRequest.Entry> entries = Stream.of(
                 "family_name",
-                "given_name"
+                "given_name",
+                "eduid"
         ).map(ClaimsSetRequest.Entry::new).collect(Collectors.toList());
         params.put("claims", new OIDCClaimsRequest().withIDTokenClaimsRequest(new ClaimsSetRequest(entries)).toJSONString());
 

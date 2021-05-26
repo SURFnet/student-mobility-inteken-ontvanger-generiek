@@ -189,7 +189,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
     }
 
     private void doReportBackResults(String state) throws IOException, NoSuchAlgorithmException, JOSEException, NoSuchProviderException {
-        Map<String, String> tokenResult = Collections.singletonMap("access_token",UUID.randomUUID().toString());
+        Map<String, String> tokenResult = Collections.singletonMap("access_token", UUID.randomUUID().toString());
 
         stubFor(post(urlPathMatching("/oidc/token")).willReturn(aResponse()
                 .withHeader("Content-Type", "application/json")
@@ -201,7 +201,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
 
         EnrollmentRequest enrollmentRequest = enrollmentRepository.findByIdentifier(state).get();
         Map<String, Object> results = objectMapper.readValue(readFile("data/results.json"), Map.class);
-        results.put("personId", enrollmentRequest.getPersonId());
+        results.put("personId", enrollmentRequest.getEduid());
 
         given()
                 .when()
@@ -215,7 +215,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
     }
 
     private void doPlayReportBackResults(String state) throws IOException, NoSuchAlgorithmException, JOSEException, NoSuchProviderException {
-        Map<String, String> tokenResult = Collections.singletonMap("access_token",UUID.randomUUID().toString());
+        Map<String, String> tokenResult = Collections.singletonMap("access_token", UUID.randomUUID().toString());
 
         stubFor(post(urlPathMatching("/oidc/token")).willReturn(aResponse()
                 .withHeader("Content-Type", "application/json")
@@ -262,7 +262,8 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                 .subject("subject")
                 .notBeforeTime(new Date(System.currentTimeMillis()))
                 .claim("family_name", "Doe")
-                .claim("given_name", "John");
+                .claim("given_name", "John")
+                .claim("eduid", "1234567890 ");
         JWTClaimsSet claimsSet = builder.build();
         JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.RS256).type(JOSEObjectType.JWT)
                 .keyID(keyId).build();

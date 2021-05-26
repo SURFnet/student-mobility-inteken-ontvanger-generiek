@@ -15,6 +15,7 @@ public class EnrollmentResult {
 
     public Map<String, Object> transform() {
         //For now assume we can leave everything as is, but this is not very feasible for the actual implementation
+        this.results.remove("personId");
         return this.results;
     }
 
