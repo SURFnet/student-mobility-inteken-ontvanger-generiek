@@ -1,0 +1,1 @@
+ALTER TABLE enrollment_requests ALTER COLUMN person_id RENAME TO eduid;
