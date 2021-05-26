@@ -4,8 +4,10 @@ jdk:
 dist: trusty
 
 before_install:
-- pyenv global system 3.6
+- pyenv install 3.6.3
+- pyenv global system 3.6.3
 - pip3 install --user codecov
+
 script:
 - mvn test
 after_success:
