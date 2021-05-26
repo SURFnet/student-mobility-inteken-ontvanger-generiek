@@ -104,7 +104,7 @@ public class EnrollmentEndpoint {
      */
     @PostMapping(value = "/api/enrollment", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
     public View enrollment(@ModelAttribute EnrollmentRequest enrollmentRequest) {
-        LOG.debug("Received authorization for enrollment request: " + enrollmentRequest.toString());
+        LOG.debug("Received authorization for enrollment request: " + enrollmentRequest);
         // Prevent forgery and cherry-pick attributes
         enrollmentRequest = new EnrollmentRequest(enrollmentRequest);
         enrollmentRepository.save(enrollmentRequest);
@@ -112,7 +112,7 @@ public class EnrollmentEndpoint {
         //Start authorization flow
         String authorizationURI = this.buildAuthorizationURI(identifier, enrollmentRequest);
 
-        LOG.debug("Starting authorization for enrollment");
+        LOG.debug("Starting authorization for enrollment request: " + enrollmentRequest);
 
         return new RedirectView(authorizationURI);
     }
@@ -122,8 +122,6 @@ public class EnrollmentEndpoint {
      */
     @GetMapping("/redirect_uri")
     public View redirect(@RequestParam("code") String code, @RequestParam("state") String state) throws ParseException, UnsupportedEncodingException {
-        LOG.debug("Redirect after authorization called");
-
         MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
         map.add("client_id", clientId);
         map.add("client_secret", clientSecret);
@@ -153,6 +151,9 @@ public class EnrollmentEndpoint {
 
         EnrollmentRequest enrollmentRequest = enrollmentRepository.findByIdentifier(state)
                 .orElseThrow(ExpiredEnrollmentRequestException::new);
+
+        LOG.debug("Redirect after authorization called for enrollment request: " + enrollmentRequest);
+
         enrollmentRequest.setEduid(eduid);
         enrollmentRequest.setAccessToken(accessToken);
         enrollmentRequest.setRefreshToken(refreshToken);
@@ -183,10 +184,10 @@ public class EnrollmentEndpoint {
     public Map<String, Object> start(
             @RequestHeader("X-Correlation-ID") String correlationId,
             @RequestBody Map<String, Object> offering) {
-        LOG.debug("Received start registration from broker for correlationId: " + correlationId);
-
         EnrollmentRequest enrollmentRequest = enrollmentRepository.findByIdentifier(correlationId)
                 .orElseThrow(ExpiredEnrollmentRequestException::new);
+
+        LOG.debug("Received start registration from broker for enrollment request: " + enrollmentRequest);
 
         Map<String, Map<String, Object>> body = new HashMap<>();
         body.put("offering", offering);
@@ -226,13 +227,13 @@ public class EnrollmentEndpoint {
     public ResponseEntity<Void> results(@RequestBody Map<String, Object> results) {
         String personId = (String) results.get("personId");
 
-        LOG.debug(String.format("Report back results endpoint called by SIS personId %s", personId));
-
         List<EnrollmentRequest> enrollmentRequests = enrollmentRepository.findByEduidOrderByCreatedDesc(personId);
         if (CollectionUtils.isEmpty(enrollmentRequests)) {
             throw new ExpiredEnrollmentRequestException();
         }
         EnrollmentRequest enrollmentRequest = enrollmentRequests.get(0);
+
+        LOG.debug(String.format("Report back results endpoint called by SIS personId %s and enrolment request %s", personId, enrollmentRequest));
 
         MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
         map.add("client_id", clientId);
@@ -240,7 +241,7 @@ public class EnrollmentEndpoint {
         map.add("grant_type", "refresh_token");
         map.add("refresh_token", enrollmentRequest.getRefreshToken());
 
-        LOG.debug("Obtaining new accessToken with saved refreshToken");
+        LOG.debug("Obtaining new accessToken with saved refreshToken for enrolment request: " + enrollmentRequest);
 
         Map<String, Object> oidcResponse = tokenRequest(map);
 
@@ -248,7 +249,7 @@ public class EnrollmentEndpoint {
         String resultsURI = enrollmentRequest.getResultsURI();
 
         //Now call the actual OOAPI endpoint with the new accessToken
-        LOG.debug(String.format("Posting back results endpoint with personId %s to %s", personId, resultsURI));
+        LOG.debug(String.format("Posting back results endpoint for personId %s and enrolment request %s to %s", personId, enrollmentRequest, resultsURI));
 
         HttpHeaders httpHeaders = getOidcAuthorizationHttpHeaders(accessToken);
         Map<String, Object> body = new EnrollmentResult(results).transform();
