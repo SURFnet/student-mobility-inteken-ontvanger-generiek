@@ -310,6 +310,8 @@ public class EnrollmentEndpoint {
 
     @SneakyThrows
     private void validateServiceRegistryEndpoints(EnrollmentRequest enrollmentRequest) {
+        LOG.debug(String.format("Calling validate enrollmentRequest with %s", enrollmentRequest));
+
         ResponseEntity<Map> response = restTemplate.postForEntity(
                 this.validationServiceRegistryEndpoint,
                 new HttpEntity<>(enrollmentRequest),
