@@ -10,6 +10,7 @@ import generiek.model.EnrollmentRequest;
 import generiek.ooapi.EnrollmentResult;
 import generiek.repository.EnrollmentRepository;
 import generiek.repository.ExpiredEnrollmentRequestException;
+import lombok.SneakyThrows;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -63,6 +64,7 @@ public class EnrollmentEndpoint {
     private final String backendApiUser;
     private final String backendApiPassword;
     private final String brokerUrl;
+    private final URI validationServiceRegistryEndpoint;
     private final boolean allowPlayground;
     private final EnrollmentRepository enrollmentRepository;
 
@@ -82,6 +84,7 @@ public class EnrollmentEndpoint {
                               @Value("${backend.api_user}") String backendApiUser,
                               @Value("${backend.api_password}") String backendApiPassword,
                               @Value("${broker.url}") String brokerUrl,
+                              @Value("${broker.validation_service_registry_endpoint}") URI validationServiceRegistryEndpoint,
                               @Value("${features.allow_playground}") boolean allowPlayground,
                               EnrollmentRepository enrollmentRepository) {
         this.acr = acr;
@@ -95,6 +98,7 @@ public class EnrollmentEndpoint {
         this.backendApiUser = backendApiUser;
         this.backendApiPassword = backendApiPassword;
         this.brokerUrl = brokerUrl;
+        this.validationServiceRegistryEndpoint = validationServiceRegistryEndpoint;
         this.enrollmentRepository = enrollmentRepository;
         this.allowPlayground = allowPlayground;
     }
@@ -107,6 +111,9 @@ public class EnrollmentEndpoint {
         LOG.debug("Received authorization for enrollment request: " + enrollmentRequest);
         // Prevent forgery and cherry-pick attributes
         enrollmentRequest = new EnrollmentRequest(enrollmentRequest);
+        // Check the broker-serviceregistry to validate the personURI and resultURI before continuing
+        this.validateServiceRegistryEndpoints(enrollmentRequest);
+
         enrollmentRepository.save(enrollmentRequest);
         String identifier = enrollmentRequest.getIdentifier();
         //Start authorization flow
@@ -301,5 +308,17 @@ public class EnrollmentEndpoint {
         return builder.build().encode().toUriString();
     }
 
+    @SneakyThrows
+    private void validateServiceRegistryEndpoints(EnrollmentRequest enrollmentRequest) {
+        ResponseEntity<Map> response = restTemplate.postForEntity(
+                this.validationServiceRegistryEndpoint,
+                new HttpEntity<>(enrollmentRequest),
+                Map.class);
+        if (!(boolean) response.getBody().get("valid")) {
+            throw new IllegalArgumentException(
+                    String.format("Invalid URI's for enrolment %s provided reported by %s",
+                            enrollmentRequest, this.validationServiceRegistryEndpoint));
+        }
+    }
 
 }

@@ -15,6 +15,7 @@ import generiek.AbstractIntegrationTest;
 import generiek.WireMockExtension;
 import generiek.model.EnrollmentRequest;
 import io.restassured.http.ContentType;
+import lombok.SneakyThrows;
 import org.apache.commons.io.IOUtils;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.junit.jupiter.api.Test;
@@ -26,7 +27,6 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -119,7 +119,13 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
         doPlayReportBackResults(state);
     }
 
-    private String doAuthorize() throws UnsupportedEncodingException {
+    @SneakyThrows
+    private String doAuthorize() {
+        stubFor(post(urlPathMatching("/api/validate-service-registry-endpoints")).willReturn(aResponse()
+                .withHeader("Content-Type", "application/json")
+                .withBody(objectMapper.writeValueAsString(Collections.singletonMap("valid", true)))));
+
+
         String location = given().redirects().follow(false)
                 .when()
                 .header("Content-Type", APPLICATION_FORM_URLENCODED_VALUE)
@@ -188,7 +194,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
         assertEquals("ok", result.get("result"));
     }
 
-    private void doReportBackResults(String state) throws IOException, NoSuchAlgorithmException, JOSEException, NoSuchProviderException {
+    private void doReportBackResults(String state) throws IOException {
         Map<String, String> tokenResult = Collections.singletonMap("access_token", UUID.randomUUID().toString());
 
         stubFor(post(urlPathMatching("/oidc/token")).willReturn(aResponse()

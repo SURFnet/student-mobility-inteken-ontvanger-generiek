@@ -15,7 +15,8 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
                 "backend.url=http://localhost:8081/intake",
                 "oidc.authorization-uri=http://localhost:8081/oidc/authorize",
                 "oidc.token-uri=http://localhost:8081/oidc/token",
-                "oidc.jwk-set-uri=http://localhost:8081/oidc/certs"
+                "oidc.jwk-set-uri=http://localhost:8081/oidc/certs",
+                "broker.validation_service_registry_endpoint=http://localhost:8081/api/validate-service-registry-endpoints"
         })
 public abstract class AbstractIntegrationTest {
 

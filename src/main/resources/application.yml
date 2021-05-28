@@ -30,6 +30,7 @@ broker:
   url: "http://localhost:3003"
   user: user
   password: secret
+  validation_service_registry_endpoint: "http://localhost:8091/api/validate-service-registry-endpoints"
 
 # Credentials of the SIS (e.g. Osiris) to check against when reporting back results
 sis:
