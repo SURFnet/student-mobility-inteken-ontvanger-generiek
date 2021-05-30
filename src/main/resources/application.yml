@@ -75,3 +75,8 @@ management:
       show-details: when_authorized
     info:
       enabled: true
+  info:
+    git:
+      mode: full
+    defaults:
+      enabled: true
