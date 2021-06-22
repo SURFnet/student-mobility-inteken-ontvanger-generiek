@@ -5,9 +5,8 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 
 @ResponseStatus(HttpStatus.CONFLICT)
 public class ExpiredEnrollmentRequestException extends RuntimeException {
-
     public ExpiredEnrollmentRequestException() {
-        super("Expired enrollmentRequest");
+      super("Enrollment not found.");
     }
 
 }
