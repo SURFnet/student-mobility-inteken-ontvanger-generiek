@@ -191,10 +191,11 @@ public class EnrollmentEndpoint {
     public Map<String, Object> start(
             @RequestHeader("X-Correlation-ID") String correlationId,
             @RequestBody Map<String, Object> offering) {
+        LOG.debug(String.format("Received start registration from broker for correlation-id %s and offering %s", correlationId, offering));
+
         EnrollmentRequest enrollmentRequest = enrollmentRepository.findByIdentifier(correlationId)
                 .orElseThrow(ExpiredEnrollmentRequestException::new);
-
-        LOG.debug("Received start registration from broker for enrollment request: " + enrollmentRequest);
+        LOG.debug(String.format("Found matching enrollment request %s for correlation-id %s", enrollmentRequest, correlationId));
 
         Map<String, Map<String, Object>> body = new HashMap<>();
         body.put("offering", offering);
