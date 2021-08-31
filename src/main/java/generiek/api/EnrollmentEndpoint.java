@@ -32,6 +32,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.View;
 import org.springframework.web.servlet.view.RedirectView;
@@ -45,6 +46,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -156,8 +158,14 @@ public class EnrollmentEndpoint {
             throw new IllegalArgumentException("eduid is required. Check the ARP for RP:" + this.clientId);
         }
 
-        EnrollmentRequest enrollmentRequest = enrollmentRepository.findByIdentifier(state)
-                .orElseThrow(ExpiredEnrollmentRequestException::new);
+        Optional<EnrollmentRequest> enrollmentRequestOptional = enrollmentRepository.findByIdentifier(state);
+        if (!enrollmentRequestOptional.isPresent()) {
+            LOG.error("Redirect after authorization called and no enrollment request found");
+
+            String redirect = String.format("%s?error=%s", brokerUrl, "Session lost. Please try again");
+            return new RedirectView(redirect, false);
+        }
+        EnrollmentRequest enrollmentRequest =  enrollmentRequestOptional.get();
 
         LOG.debug("Redirect after authorization called for enrollment request: " + enrollmentRequest);
 
@@ -188,7 +196,7 @@ public class EnrollmentEndpoint {
      * Start the actual enrollment based on the data returned in the me endpoint
      */
     @PostMapping("/api/start")
-    public Map<String, Object> start(
+    public ResponseEntity<Map<String, Object>> start(
             @RequestHeader("X-Correlation-ID") String correlationId,
             @RequestBody Map<String, Object> offering) {
         LOG.debug(String.format("Received start registration from broker for correlation-id %s and offering %s", correlationId, offering));
@@ -199,18 +207,25 @@ public class EnrollmentEndpoint {
 
         Map<String, Map<String, Object>> body = new HashMap<>();
         body.put("offering", offering);
-        Map<String, Object> personMap = person(enrollmentRequest);
+        Map<String, Object> personMap;
+        try {
+            personMap = person(enrollmentRequest);
+        } catch (HttpClientErrorException e) {
+            //Preserve the status from the home institution
+            return ResponseEntity.status(e.getStatusCode()).build();
+        }
+
         personMap.put("personId", enrollmentRequest.getEduid());
         body.put("person", personMap);
 
         HttpHeaders httpHeaders = new HttpHeaders();
         httpHeaders.setBasicAuth(backendApiUser, backendApiPassword);
         HttpEntity<Map<String, Object>> httpEntity = new HttpEntity(body, httpHeaders);
-        ResponseEntity<Map<String, Object>> responseEntity = restTemplate.exchange(backendUrl, HttpMethod.POST, httpEntity, mapRef);
 
         LOG.debug("Returning registration result to broker");
 
-        return responseEntity.getBody();
+        ResponseEntity<Map<String, Object>> responseEntity = restTemplate.exchange(backendUrl, HttpMethod.POST, httpEntity, mapRef);
+        return responseEntity;
     }
 
     /*
