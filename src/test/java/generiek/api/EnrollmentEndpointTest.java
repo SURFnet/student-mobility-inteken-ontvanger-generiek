@@ -28,6 +28,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
 import java.net.URLDecoder;
+import java.nio.charset.Charset;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
@@ -53,6 +54,7 @@ import static io.restassured.RestAssured.given;
 import static org.apache.http.HttpStatus.SC_MOVED_TEMPORARILY;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED_VALUE;
 
@@ -106,17 +108,17 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
     @Test
     void fullScenario() throws Exception {
         String state = doAuthorize();
-        doToken(state);
-        doStart(state);
-        doReportBackResults(state);
+        String correlationId = doToken(state);
+        doStart(correlationId);
+        doReportBackResults(correlationId);
     }
 
     @Test
     void fullScenarioWithPlay() throws Exception {
         String state = doAuthorize();
-        doToken(state);
-        doStart(state);
-        doPlayReportBackResults(state);
+        String correlationId = doToken(state);
+        doStart(correlationId);
+        doPlayReportBackResults(correlationId);
     }
 
     @SneakyThrows
@@ -139,11 +141,11 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
         MultiValueMap<String, String> params = UriComponentsBuilder.fromHttpUrl(location).build().getQueryParams();
         String scope = params.getFirst("scope");
         assertEquals("openid write", URLDecoder.decode(scope, "UTF-8"));
-        return params.getFirst("state");
+        return URLDecoder.decode(params.getFirst("state"), Charset.defaultCharset().name());
     }
 
 
-    private void doToken(String state) throws NoSuchProviderException, NoSuchAlgorithmException, JOSEException, IOException {
+    private String doToken(String state) throws NoSuchProviderException, NoSuchAlgorithmException, JOSEException, IOException {
         String accessToken = accessToken();
         Map<String, String> tokenResult = new HashMap<>();
         tokenResult.put("access_token", accessToken);
@@ -166,9 +168,11 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
         MultiValueMap<String, String> params = UriComponentsBuilder.fromHttpUrl(location).build().getQueryParams();
 
         assertTrue(location.startsWith(brokerUrl));
-        assertEquals(state, params.getFirst("correlationID"));
+        String correlationID = params.getFirst("correlationID");
+        assertNotNull(correlationID);
         assertEquals("John", params.getFirst("name"));
         assertEquals("enroll", params.getFirst("step"));
+        return correlationID;
     }
 
     private void doStart(String state) throws IOException {

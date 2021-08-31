@@ -1,5 +1,6 @@
 package generiek.api;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jwt.JWTClaimsSet;
@@ -39,6 +40,7 @@ import org.springframework.web.servlet.View;
 import org.springframework.web.servlet.view.RedirectView;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URLEncoder;
@@ -70,6 +72,7 @@ public class EnrollmentEndpoint {
     private final URI validationServiceRegistryEndpoint;
     private final boolean allowPlayground;
     private final EnrollmentRepository enrollmentRepository;
+    private final ObjectMapper objectMapper;
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final ParameterizedTypeReference<Map<String, Object>> mapRef = new ParameterizedTypeReference<Map<String, Object>>() {
@@ -89,7 +92,8 @@ public class EnrollmentEndpoint {
                               @Value("${broker.url}") String brokerUrl,
                               @Value("${broker.validation_service_registry_endpoint}") URI validationServiceRegistryEndpoint,
                               @Value("${features.allow_playground}") boolean allowPlayground,
-                              EnrollmentRepository enrollmentRepository) {
+                              EnrollmentRepository enrollmentRepository,
+                              ObjectMapper objectMapper) {
         this.acr = acr;
         this.clientId = clientId;
         this.clientSecret = clientSecret;
@@ -103,6 +107,7 @@ public class EnrollmentEndpoint {
         this.brokerUrl = brokerUrl;
         this.validationServiceRegistryEndpoint = validationServiceRegistryEndpoint;
         this.enrollmentRepository = enrollmentRepository;
+        this.objectMapper = objectMapper;
         this.allowPlayground = allowPlayground;
         this.restTemplate.setInterceptors(Collections.singletonList((request, body, execution) -> {
             request.getHeaders().add("Accept-Language", LanguageFilter.language.get());
@@ -115,17 +120,14 @@ public class EnrollmentEndpoint {
      * Endpoint called by the student-mobility-broker form submit
      */
     @PostMapping(value = "/api/enrollment", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
-    public View enrollment(@ModelAttribute EnrollmentRequest enrollmentRequest) {
+    public View enrollment(@ModelAttribute EnrollmentRequest enrollmentRequest) throws IOException {
         LOG.debug("Received authorization for enrollment request: " + enrollmentRequest);
         // Prevent forgery and cherry-pick attributes
         enrollmentRequest = new EnrollmentRequest(enrollmentRequest);
         // Check the broker-serviceregistry to validate the personURI and resultURI before continuing
         this.validateServiceRegistryEndpoints(enrollmentRequest);
-
-        enrollmentRepository.save(enrollmentRequest);
-        String identifier = enrollmentRequest.getIdentifier();
         //Start authorization flow
-        String authorizationURI = this.buildAuthorizationURI(identifier, enrollmentRequest);
+        String authorizationURI = this.buildAuthorizationURI(enrollmentRequest);
 
         LOG.debug("Starting authorization for enrollment request: " + enrollmentRequest);
 
@@ -136,7 +138,7 @@ public class EnrollmentEndpoint {
      * Redirect after authentication. Give browser-control back to the client to call start and show progress-spinner
      */
     @GetMapping("/redirect_uri")
-    public View redirect(@RequestParam("code") String code, @RequestParam("state") String state) throws ParseException, UnsupportedEncodingException {
+    public View redirect(@RequestParam("code") String code, @RequestParam("state") String state) throws ParseException, IOException {
         MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
         map.add("client_id", clientId);
         map.add("client_secret", clientSecret);
@@ -163,15 +165,15 @@ public class EnrollmentEndpoint {
         if (!StringUtils.hasText(eduid)) {
             throw new IllegalArgumentException("eduid is required. Check the ARP for RP:" + this.clientId);
         }
-
-        Optional<EnrollmentRequest> enrollmentRequestOptional = enrollmentRepository.findByIdentifier(state);
-        if (!enrollmentRequestOptional.isPresent()) {
-            LOG.error("Redirect after authorization called and no enrollment request found");
+        EnrollmentRequest enrollmentRequest;
+        try {
+            enrollmentRequest = EnrollmentRequest.serializeFromBase64(objectMapper, state);
+        }  catch (IllegalArgumentException | IOException e) {
+            LOG.error("Redirect after authorization called and no valid enrollment request");
 
             String redirect = String.format("%s?error=%s", brokerUrl, "Session lost. Please try again");
             return new RedirectView(redirect, false);
         }
-        EnrollmentRequest enrollmentRequest =  enrollmentRequestOptional.get();
 
         LOG.debug("Redirect after authorization called for enrollment request: " + enrollmentRequest);
 
@@ -180,7 +182,8 @@ public class EnrollmentEndpoint {
         enrollmentRequest.setRefreshToken(refreshToken);
         enrollmentRepository.save(enrollmentRequest);
 
-        String redirect = String.format("%s?step=enroll&correlationID=%s&name=%s", brokerUrl, state, givenName);
+        String redirect = String.format("%s?step=enroll&correlationID=%s&name=%s",
+                brokerUrl, enrollmentRequest.getIdentifier(), givenName);
 
         LOG.debug(String.format("Redirecting back to %s client after authorization", redirect));
 
@@ -308,8 +311,9 @@ public class EnrollmentEndpoint {
         return httpHeaders;
     }
 
-    private String buildAuthorizationURI(String state, EnrollmentRequest enrollmentRequest) {
+    private String buildAuthorizationURI(EnrollmentRequest enrollmentRequest) throws IOException {
         Map<String, String> params = new HashMap<>();
+        String base64Enrollment = enrollmentRequest.serializeToBase64(objectMapper);
 
         List<ClaimsSetRequest.Entry> entries = Stream.of(
                 "family_name",
@@ -323,7 +327,7 @@ public class EnrollmentEndpoint {
         params.put("client_id", clientId);
         params.put("response_type", "code");
         params.put("redirect_uri", redirectUri);
-        params.put("state", state);
+        params.put("state", base64Enrollment);
 
         UriComponentsBuilder builder = UriComponentsBuilder.fromUri(authorizationUri);
         params.forEach(builder::queryParam);
