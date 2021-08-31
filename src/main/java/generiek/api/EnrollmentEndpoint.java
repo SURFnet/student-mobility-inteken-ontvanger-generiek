@@ -5,6 +5,7 @@ import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
+import generiek.LanguageFilter;
 import generiek.jwt.JWTValidator;
 import generiek.model.EnrollmentRequest;
 import generiek.ooapi.EnrollmentResult;
@@ -103,6 +104,11 @@ public class EnrollmentEndpoint {
         this.validationServiceRegistryEndpoint = validationServiceRegistryEndpoint;
         this.enrollmentRepository = enrollmentRepository;
         this.allowPlayground = allowPlayground;
+        this.restTemplate.setInterceptors(Collections.singletonList((request, body, execution) -> {
+            request.getHeaders().add("Accept-Language", LanguageFilter.language.get());
+            return execution.execute(request, body);
+        }));
+
     }
 
     /*
