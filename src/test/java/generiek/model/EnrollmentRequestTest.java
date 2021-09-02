@@ -1,11 +1,15 @@
 package generiek.model;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class EnrollmentRequestTest {
 
@@ -14,9 +18,10 @@ class EnrollmentRequestTest {
         EnrollmentRequest enrollmentRequest = new EnrollmentRequest();
         enrollmentRequest.setEduid("eduID");
         enrollmentRequest.setRefreshToken("refreshToken");
-        enrollmentRequest.setResultsURI("https://results.uu.university.com");
-        enrollmentRequest.setPersonURI("https://results.uu.university.com");
-        enrollmentRequest.setScope("https://long.scope.uri.at.somewhere");
+        String randomString = RandomStringUtils.randomAscii(250);
+        enrollmentRequest.setResultsURI("https://results.uu.university.com" + randomString);
+        enrollmentRequest.setPersonURI("https://results.uu.university.com" + randomString);
+        enrollmentRequest.setScope("https://long.scope.uri.at.somewhere" + randomString);
 
         enrollmentRequest = new EnrollmentRequest(enrollmentRequest);
 
@@ -25,6 +30,9 @@ class EnrollmentRequestTest {
 
         ObjectMapper objectMapper = new ObjectMapper();
         String base64 = enrollmentRequest.serializeToBase64(objectMapper);
+        //Ensure we don't max out on the query param size - which we won't for the GZIP compression
+        assertTrue(base64.length() < (1024 / 2));
+
         EnrollmentRequest newEnrollmentRequest = EnrollmentRequest.serializeFromBase64(objectMapper, base64);
 
         assertEquals(enrollmentRequest.getPersonURI(), newEnrollmentRequest.getPersonURI());
