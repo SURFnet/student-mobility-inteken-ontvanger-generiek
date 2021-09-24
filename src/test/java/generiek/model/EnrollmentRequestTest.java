@@ -20,7 +20,7 @@ class EnrollmentRequestTest {
         enrollmentRequest.setRefreshToken("refreshToken");
         String randomString = RandomStringUtils.randomAscii(250);
         enrollmentRequest.setResultsURI("https://results.uu.university.com" + randomString);
-        enrollmentRequest.setPersonAuth("HEADER");
+        enrollmentRequest.setPersonAuth(PersonAuthentication.HEADER.name());
         enrollmentRequest.setPersonURI("https://results.uu.university.com" + randomString);
         enrollmentRequest.setScope("https://long.scope.uri.at.somewhere" + randomString);
 

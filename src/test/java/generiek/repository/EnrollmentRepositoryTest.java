@@ -1,6 +1,7 @@
 package generiek.repository;
 
 import generiek.model.EnrollmentRequest;
+import generiek.model.PersonAuthentication;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -21,7 +22,7 @@ class EnrollmentRepositoryTest {
         EnrollmentRequest enrollmentRequest = new EnrollmentRequest();
         enrollmentRequest.setIdentifier("forgery");
         enrollmentRequest.setPersonURI("https://www.test.org");
-        enrollmentRequest.setPersonAuth("HEADER");
+        enrollmentRequest.setPersonAuth(PersonAuthentication.HEADER.name());
         enrollmentRequest.setResultsURI("https://www.test.org");
         enrollmentRequest.setScope("inteken");
 

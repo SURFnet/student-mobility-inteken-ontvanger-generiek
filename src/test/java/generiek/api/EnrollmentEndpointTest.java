@@ -14,6 +14,7 @@ import com.nimbusds.jwt.SignedJWT;
 import generiek.AbstractIntegrationTest;
 import generiek.WireMockExtension;
 import generiek.model.EnrollmentRequest;
+import generiek.model.PersonAuthentication;
 import io.restassured.http.ContentType;
 import lombok.SneakyThrows;
 import org.apache.commons.io.IOUtils;
@@ -107,25 +108,25 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
 
     @Test
     void fullScenario() throws Exception {
-        String state = doAuthorize("HEADER");
+        String state = doAuthorize(PersonAuthentication.HEADER.name());
         String correlationId = doToken(state);
-        doStart(correlationId, "HEADER");
+        doStart(correlationId, PersonAuthentication.HEADER.name());
         doReportBackResults(correlationId);
     }
 
     @Test
     void fullScenarioWithPostPersonAuth() throws Exception {
-        String state = doAuthorize("FORM");
+        String state = doAuthorize(PersonAuthentication.FORM.name());
         String correlationId = doToken(state);
-        doStart(correlationId, "FORM");
+        doStart(correlationId, PersonAuthentication.FORM.name());
         doReportBackResults(correlationId);
     }
 
     @Test
     void fullScenarioWithPlay() throws Exception {
-        String state = doAuthorize("HEADER");
+        String state = doAuthorize(PersonAuthentication.HEADER.name());
         String correlationId = doToken(state);
-        doStart(correlationId, "HEADER");
+        doStart(correlationId, PersonAuthentication.HEADER.name());
         doPlayReportBackResults(correlationId);
     }
 
@@ -186,7 +187,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
 
     private void doStart(String state, String personAuth) throws IOException {
         String offering = readFile("data/offering.json");
-        if (personAuth.equalsIgnoreCase("HEADER")) {
+        if (personAuth.equalsIgnoreCase(PersonAuthentication.HEADER.name())) {
             stubFor(get(urlPathMatching("/person")).willReturn(aResponse()
                     .withHeader("Content-Type", "application/json")
                     .withBody(readFile("data/person.json"))));

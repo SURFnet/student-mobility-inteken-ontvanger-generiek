@@ -9,6 +9,7 @@ import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import generiek.LanguageFilter;
 import generiek.jwt.JWTValidator;
 import generiek.model.EnrollmentRequest;
+import generiek.model.PersonAuthentication;
 import generiek.ooapi.EnrollmentResult;
 import generiek.repository.EnrollmentRepository;
 import generiek.repository.ExpiredEnrollmentRequestException;
@@ -281,7 +282,7 @@ public class EnrollmentEndpoint {
         //Now call the actual OOAPI endpoint with the new accessToken
         LOG.debug(String.format("Posting back results endpoint for personId %s and enrolment request %s to %s", personId, enrollmentRequest, resultsURI));
 
-        HttpHeaders httpHeaders = getOidcAuthorizationHttpHeaders(accessToken, "HEADER");
+        HttpHeaders httpHeaders = getOidcAuthorizationHttpHeaders(accessToken, PersonAuthentication.HEADER.name());
         Map<String, Object> body = new EnrollmentResult(results).transform();
         HttpEntity<Void> requestEntity = new HttpEntity(body, httpHeaders);
 
@@ -300,7 +301,7 @@ public class EnrollmentEndpoint {
 
         LOG.debug("Retrieve person information from : " + enrollmentRequest.getPersonURI() + " using personAuth; " + personAuth);
 
-        if (personAuth.equalsIgnoreCase("FORM")) {
+        if (personAuth.equalsIgnoreCase(PersonAuthentication.FORM.name())) {
             MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
             map.add("access_token", enrollmentRequest.getAccessToken());
             HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(map, httpHeaders);
@@ -314,7 +315,7 @@ public class EnrollmentEndpoint {
     private HttpHeaders getOidcAuthorizationHttpHeaders(String accessToken, String personAuth) {
         HttpHeaders httpHeaders = new HttpHeaders();
         httpHeaders.add("Accept", "application/json, application/json;charset=UTF-8");
-        if (personAuth.equalsIgnoreCase("FORM")) {
+        if (personAuth.equalsIgnoreCase(PersonAuthentication.FORM.name())) {
             httpHeaders.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
         } else {
             httpHeaders.setBearerAuth(accessToken);
