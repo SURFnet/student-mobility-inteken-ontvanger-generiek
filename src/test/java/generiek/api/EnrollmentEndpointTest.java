@@ -115,9 +115,9 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
 
     @Test
     void fullScenarioWithPostPersonAuth() throws Exception {
-        String state = doAuthorize("POST");
+        String state = doAuthorize("FORM");
         String correlationId = doToken(state);
-        doStart(correlationId, "POST");
+        doStart(correlationId, "FORM");
         doReportBackResults(correlationId);
     }
 

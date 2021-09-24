@@ -300,7 +300,7 @@ public class EnrollmentEndpoint {
 
         LOG.debug("Retrieve person information from : " + enrollmentRequest.getPersonURI() + " using personAuth; " + personAuth);
 
-        if (personAuth.equalsIgnoreCase("POST")) {
+        if (personAuth.equalsIgnoreCase("FORM")) {
             MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
             map.add("access_token", enrollmentRequest.getAccessToken());
             HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(map, httpHeaders);
@@ -314,7 +314,7 @@ public class EnrollmentEndpoint {
     private HttpHeaders getOidcAuthorizationHttpHeaders(String accessToken, String personAuth) {
         HttpHeaders httpHeaders = new HttpHeaders();
         httpHeaders.add("Accept", "application/json, application/json;charset=UTF-8");
-        if (personAuth.equalsIgnoreCase("POST")) {
+        if (personAuth.equalsIgnoreCase("FORM")) {
             httpHeaders.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
         } else {
             httpHeaders.setBearerAuth(accessToken);
