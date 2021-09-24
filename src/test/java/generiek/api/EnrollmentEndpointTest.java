@@ -107,22 +107,30 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
 
     @Test
     void fullScenario() throws Exception {
-        String state = doAuthorize();
+        String state = doAuthorize("HEADER");
         String correlationId = doToken(state);
-        doStart(correlationId);
+        doStart(correlationId, "HEADER");
+        doReportBackResults(correlationId);
+    }
+
+    @Test
+    void fullScenarioWithPostPersonAuth() throws Exception {
+        String state = doAuthorize("POST");
+        String correlationId = doToken(state);
+        doStart(correlationId, "POST");
         doReportBackResults(correlationId);
     }
 
     @Test
     void fullScenarioWithPlay() throws Exception {
-        String state = doAuthorize();
+        String state = doAuthorize("HEADER");
         String correlationId = doToken(state);
-        doStart(correlationId);
+        doStart(correlationId, "HEADER");
         doPlayReportBackResults(correlationId);
     }
 
     @SneakyThrows
-    private String doAuthorize() {
+    private String doAuthorize(String personAuth) {
         stubFor(post(urlPathMatching("/api/validate-service-registry-endpoints")).willReturn(aResponse()
                 .withHeader("Content-Type", "application/json")
                 .withBody(objectMapper.writeValueAsString(Collections.singletonMap("valid", true)))));
@@ -132,6 +140,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                 .when()
                 .header("Content-Type", APPLICATION_FORM_URLENCODED_VALUE)
                 .param("personURI", "http://localhost:8081/person")
+                .param("personAuth", personAuth)
                 .param("resultsURI", "http://localhost:8081/results")
                 .param("scope", "write")
                 .post("/api/enrollment")
@@ -175,12 +184,17 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
         return correlationID;
     }
 
-    private void doStart(String state) throws IOException {
+    private void doStart(String state, String personAuth) throws IOException {
         String offering = readFile("data/offering.json");
-
-        stubFor(get(urlPathMatching("/person")).willReturn(aResponse()
-                .withHeader("Content-Type", "application/json")
-                .withBody(readFile("data/person.json"))));
+        if (personAuth.equalsIgnoreCase("HEADER")) {
+            stubFor(get(urlPathMatching("/person")).willReturn(aResponse()
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(readFile("data/person.json"))));
+        } else {
+            stubFor(post(urlPathMatching("/person")).willReturn(aResponse()
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(readFile("data/person.json"))));
+        }
 
         stubFor(post(urlPathMatching("/intake")).willReturn(aResponse()
                 .withHeader("Content-Type", "application/json")

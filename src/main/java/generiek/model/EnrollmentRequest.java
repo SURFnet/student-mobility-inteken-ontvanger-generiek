@@ -48,6 +48,9 @@ public class EnrollmentRequest implements Serializable {
     @Column(name = "results_uri")
     private String resultsURI;
 
+    @Column(name = "person_auth")
+    private String personAuth;
+
     @Column
     private String eduid;
 
@@ -66,6 +69,7 @@ public class EnrollmentRequest implements Serializable {
     public EnrollmentRequest(EnrollmentRequest enrollmentRequest) {
         validate(enrollmentRequest);
         this.personURI = enrollmentRequest.personURI;
+        this.personAuth = enrollmentRequest.personAuth;
         this.resultsURI = enrollmentRequest.resultsURI;
         this.scope = enrollmentRequest.scope;
         this.setIdentifier(UUID.randomUUID().toString());
@@ -74,6 +78,7 @@ public class EnrollmentRequest implements Serializable {
 
     private void validate(EnrollmentRequest enrollmentRequest) {
         Assert.notNull(enrollmentRequest.personURI, "personURI is required");
+        Assert.notNull(enrollmentRequest.personAuth, "personAuth is required");
         Assert.notNull(enrollmentRequest.resultsURI, "resultsURI is required");
         Assert.notNull(enrollmentRequest.scope, "scope is required");
     }
@@ -81,6 +86,7 @@ public class EnrollmentRequest implements Serializable {
     public String serializeToBase64(ObjectMapper objectMapper) throws IOException {
         Map<String, String> result = new HashMap<>();
         result.put("p", this.personURI);
+        result.put("a", this.personAuth);
         result.put("r", this.resultsURI);
         result.put("s", this.scope);
         byte[] bytes = objectMapper.writeValueAsBytes(result);
@@ -103,6 +109,7 @@ public class EnrollmentRequest implements Serializable {
 
         EnrollmentRequest enrollmentRequest = new EnrollmentRequest();
         enrollmentRequest.setPersonURI(map.get("p"));
+        enrollmentRequest.setPersonAuth(map.get("a"));
         enrollmentRequest.setResultsURI(map.get("r"));
         enrollmentRequest.setScope(map.get("s"));
         enrollmentRequest.setIdentifier(UUID.randomUUID().toString());

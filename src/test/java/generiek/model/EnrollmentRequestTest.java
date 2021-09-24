@@ -20,6 +20,7 @@ class EnrollmentRequestTest {
         enrollmentRequest.setRefreshToken("refreshToken");
         String randomString = RandomStringUtils.randomAscii(250);
         enrollmentRequest.setResultsURI("https://results.uu.university.com" + randomString);
+        enrollmentRequest.setPersonAuth("HEADER");
         enrollmentRequest.setPersonURI("https://results.uu.university.com" + randomString);
         enrollmentRequest.setScope("https://long.scope.uri.at.somewhere" + randomString);
 
@@ -31,13 +32,14 @@ class EnrollmentRequestTest {
         ObjectMapper objectMapper = new ObjectMapper();
         String base64 = enrollmentRequest.serializeToBase64(objectMapper);
         //Ensure we don't max out on the query param size - which we won't for the GZIP compression
-        assertTrue(base64.length() < (1024 / 2));
+        assertTrue(base64.length() < Math.round(1024 / 1.5));
 
         EnrollmentRequest newEnrollmentRequest = EnrollmentRequest.serializeFromBase64(objectMapper, base64);
 
         assertEquals(enrollmentRequest.getPersonURI(), newEnrollmentRequest.getPersonURI());
         assertEquals(enrollmentRequest.getScope(), newEnrollmentRequest.getScope());
         assertEquals(enrollmentRequest.getResultsURI(), newEnrollmentRequest.getResultsURI());
+        assertEquals(enrollmentRequest.getPersonAuth(), newEnrollmentRequest.getPersonAuth());
         assertNotNull(newEnrollmentRequest.getIdentifier());
         assertNotNull(newEnrollmentRequest.getCreated());
     }

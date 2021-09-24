@@ -41,7 +41,6 @@ import org.springframework.web.servlet.view.RedirectView;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.text.ParseException;
@@ -49,7 +48,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -168,7 +166,7 @@ public class EnrollmentEndpoint {
         EnrollmentRequest enrollmentRequest;
         try {
             enrollmentRequest = EnrollmentRequest.serializeFromBase64(objectMapper, state);
-        }  catch (IllegalArgumentException | IOException e) {
+        } catch (IllegalArgumentException | IOException e) {
             LOG.error("Redirect after authorization called and no valid enrollment request");
 
             String redirect = String.format("%s?error=%s", brokerUrl, "Session lost. Please try again");
@@ -283,7 +281,7 @@ public class EnrollmentEndpoint {
         //Now call the actual OOAPI endpoint with the new accessToken
         LOG.debug(String.format("Posting back results endpoint for personId %s and enrolment request %s to %s", personId, enrollmentRequest, resultsURI));
 
-        HttpHeaders httpHeaders = getOidcAuthorizationHttpHeaders(accessToken);
+        HttpHeaders httpHeaders = getOidcAuthorizationHttpHeaders(accessToken, "HEADER");
         Map<String, Object> body = new EnrollmentResult(results).transform();
         HttpEntity<Void> requestEntity = new HttpEntity(body, httpHeaders);
 
@@ -296,18 +294,31 @@ public class EnrollmentEndpoint {
     }
 
     private Map<String, Object> person(EnrollmentRequest enrollmentRequest) {
-        HttpHeaders httpHeaders = getOidcAuthorizationHttpHeaders(enrollmentRequest.getAccessToken());
-        HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(httpHeaders);
+        String personAuth = enrollmentRequest.getPersonAuth();
+        HttpHeaders httpHeaders = getOidcAuthorizationHttpHeaders(
+                enrollmentRequest.getAccessToken(), personAuth);
 
-        LOG.debug("Retrieve person information from : " + enrollmentRequest.getPersonURI());
+        LOG.debug("Retrieve person information from : " + enrollmentRequest.getPersonURI() + " using personAuth; " + personAuth);
 
-        return restTemplate.exchange(enrollmentRequest.getPersonURI(), HttpMethod.GET, requestEntity, mapRef).getBody();
+        if (personAuth.equalsIgnoreCase("POST")) {
+            MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
+            map.add("access_token", enrollmentRequest.getAccessToken());
+            HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(map, httpHeaders);
+            return restTemplate.exchange(enrollmentRequest.getPersonURI(), HttpMethod.POST, requestEntity, mapRef).getBody();
+        } else {
+            HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(httpHeaders);
+            return restTemplate.exchange(enrollmentRequest.getPersonURI(), HttpMethod.GET, requestEntity, mapRef).getBody();
+        }
     }
 
-    private HttpHeaders getOidcAuthorizationHttpHeaders(String accessToken) {
+    private HttpHeaders getOidcAuthorizationHttpHeaders(String accessToken, String personAuth) {
         HttpHeaders httpHeaders = new HttpHeaders();
         httpHeaders.add("Accept", "application/json, application/json;charset=UTF-8");
-        httpHeaders.add("Authorization", "Bearer " + accessToken);
+        if (personAuth.equalsIgnoreCase("POST")) {
+            httpHeaders.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        } else {
+            httpHeaders.setBearerAuth(accessToken);
+        }
         return httpHeaders;
     }
 
