@@ -222,7 +222,7 @@ public class EnrollmentEndpoint {
             //Preserve the status from the home institution
             return ResponseEntity.status(e.getStatusCode()).build();
         }
-
+        LOG.debug(String.format("Replacing personId %s with eduID %s", personMap.get("personId"), enrollmentRequest.getEduid()));
         personMap.put("personId", enrollmentRequest.getEduid());
         body.put("person", personMap);
 
