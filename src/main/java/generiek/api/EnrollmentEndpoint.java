@@ -122,9 +122,14 @@ public class EnrollmentEndpoint {
     public View enrollment(@ModelAttribute EnrollmentRequest enrollmentRequest) throws IOException {
         LOG.debug("Received authorization for enrollment request: " + enrollmentRequest);
         // Prevent forgery and cherry-pick attributes
-        enrollmentRequest = new EnrollmentRequest(enrollmentRequest);
-        // Check the broker-serviceregistry to validate the personURI and resultURI before continuing
-        this.validateServiceRegistryEndpoints(enrollmentRequest);
+        try {
+            enrollmentRequest = new EnrollmentRequest(enrollmentRequest);
+            // Check the broker-serviceregistry to validate the personURI and resultURI before continuing
+            this.validateServiceRegistryEndpoints(enrollmentRequest);
+        } catch (IllegalArgumentException e) {
+            String redirect = String.format("%s?error=%s", brokerUrl, "Invalid enrollmentRequest");
+            return new RedirectView(redirect, false);
+        }
         //Start authorization flow
         String authorizationURI = this.buildAuthorizationURI(enrollmentRequest);
 
