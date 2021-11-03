@@ -1,5 +1,6 @@
 package generiek.api;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.RSASSASigner;
@@ -117,13 +118,12 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                 .withHeader("Content-Type", "application/json")
                 .withBody(objectMapper.writeValueAsString(Collections.singletonMap("valid", true)))));
 
-
         String location = given().redirects().follow(false)
                 .when()
                 .header("Content-Type", APPLICATION_FORM_URLENCODED_VALUE)
                 .param("personURI", "http://localhost:8081/person")
                 .param("personAuth", personAuth)
-                .param("resultsURI", "http://localhost:8081/results")
+                .param("homeInstitution", "schac.home")
                 .param("scope", "write")
                 .post("/api/enrollment")
                 .header("Location");
@@ -197,13 +197,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
     private void doReportBackResults(String state) throws IOException {
         Map<String, String> tokenResult = Collections.singletonMap("access_token", UUID.randomUUID().toString());
 
-        stubFor(post(urlPathMatching("/oidc/token")).willReturn(aResponse()
-                .withHeader("Content-Type", "application/json")
-                .withBody(objectMapper.writeValueAsString(tokenResult))));
-
-        stubFor(post(urlPathMatching("/results")).willReturn(aResponse()
-                .withHeader("Content-Type", "application/json")
-                .withStatus(200)));
+        stubPostsForResults(tokenResult);
 
         EnrollmentRequest enrollmentRequest = enrollmentRepository.findByIdentifier(state).get();
         Map<String, Object> results = objectMapper.readValue(readFile("data/results.json"), Map.class);
@@ -220,9 +214,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                 .statusCode(200);
     }
 
-    private void doPlayReportBackResults(String state) throws IOException, NoSuchAlgorithmException, JOSEException, NoSuchProviderException {
-        Map<String, String> tokenResult = Collections.singletonMap("access_token", UUID.randomUUID().toString());
-
+    private void stubPostsForResults(Map<String, String> tokenResult) throws JsonProcessingException {
         stubFor(post(urlPathMatching("/oidc/token")).willReturn(aResponse()
                 .withHeader("Content-Type", "application/json")
                 .withBody(objectMapper.writeValueAsString(tokenResult))));
@@ -230,6 +222,16 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
         stubFor(post(urlPathMatching("/results")).willReturn(aResponse()
                 .withHeader("Content-Type", "application/json")
                 .withStatus(200)));
+
+        stubFor(post(urlPathMatching("/api/results-uri")).willReturn(aResponse()
+                .withHeader("Content-Type", "application/json")
+                .withBody(objectMapper.writeValueAsString(Collections.singletonMap("resultsURI", "http://localhost:8081/results")))));
+    }
+
+    private void doPlayReportBackResults(String state) throws IOException {
+        Map<String, String> tokenResult = Collections.singletonMap("access_token", UUID.randomUUID().toString());
+
+        stubPostsForResults(tokenResult);
 
         Map<String, Object> results = objectMapper.readValue(readFile("data/results.json"), Map.class);
 
