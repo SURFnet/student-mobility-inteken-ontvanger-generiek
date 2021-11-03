@@ -44,7 +44,7 @@ backend:
   api_password: secret
 
 oidc:
-  acr-context-class-ref: https://eduid.nl/trust/linked-institution
+  acr-context-class-ref: https://eduid.nl/trust/affiliation-student
   client-id: student.mobility.rp.localhost
   client-secret: secret
   redirect-uri: http://localhost:8092/redirect_uri
