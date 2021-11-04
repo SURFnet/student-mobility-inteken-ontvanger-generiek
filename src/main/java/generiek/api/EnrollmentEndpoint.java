@@ -177,7 +177,8 @@ public class EnrollmentEndpoint {
 
         String eduid = claimsSet.getStringClaim("eduid");
         if (!StringUtils.hasText(eduid)) {
-            throw new IllegalArgumentException("eduid is required. Check the ARP for RP:" + this.clientId);
+            String redirect = String.format("%s?error=%s", brokerUrl, "eduid is required. Check the ARP for RP:" + this.clientId);
+            return new RedirectView(redirect, false);
         }
         EnrollmentRequest enrollmentRequest;
         try {
@@ -233,8 +234,8 @@ public class EnrollmentEndpoint {
         Map<String, Object> personMap;
         try {
             personMap = person(enrollmentRequest);
-        } catch (RestClientException e) {
-            return this.errorResponseEntity("Error in retrieving perspn for enrollmentRequest: " + enrollmentRequest, e);
+        } catch (HttpStatusCodeException e) {
+            return this.errorResponseEntity("Error in retrieving person for enrollmentRequest: " + enrollmentRequest, e);
         }
         LOG.debug(String.format("Replacing personId %s with eduID %s", personMap.get("personId"), enrollmentRequest.getEduid()));
         personMap.put("personId", enrollmentRequest.getEduid());
@@ -247,8 +248,8 @@ public class EnrollmentEndpoint {
         LOG.debug("Returning registration result to broker");
         try {
             return restTemplate.exchange(backendUrl, HttpMethod.POST, httpEntity, mapRef);
-        } catch (RestClientException e) {
-            return this.errorResponseEntity("Error in registration results", e);
+        } catch (HttpStatusCodeException e) {
+            return this.errorResponseEntity("Error in registration results for enrollmentRequest: " + enrollmentRequest, e);
         }
     }
 
@@ -293,19 +294,17 @@ public class EnrollmentEndpoint {
         Map<String, Object> oidcResponse;
         try {
             oidcResponse = tokenRequest(map);
-        } catch (RestClientException e) {
+        } catch (HttpStatusCodeException e) {
             return this.errorResponseEntity(
                     "Error in obtaining new accessToken with saved refreshToken for enrolment request:" + enrollmentRequest, e);
         }
         String accessToken = (String) oidcResponse.get("access_token");
-        String resultsURI = enrollmentRequest.getResultsURI();
-        if (!StringUtils.hasText(resultsURI) || StringUtils.hasText(enrollmentRequest.getHomeInstitution())) {
-            try {
-                resultsURI =serviceRegistry.resultsURI(enrollmentRequest);
-            } catch (RestClientException e) {
-                return this.errorResponseEntity(
-                        "Error in obtaining resultsURI for enrolment request:" + enrollmentRequest, e);
-            }
+        String resultsURI;
+        try {
+            resultsURI = serviceRegistry.resultsURI(enrollmentRequest);
+        } catch (HttpStatusCodeException e) {
+            return this.errorResponseEntity(
+                    "Error in obtaining resultsURI for enrolment request:" + enrollmentRequest, e);
         }
         //Now call the actual OOAPI endpoint with the new accessToken
         LOG.debug(String.format("Posting back results endpoint for personId %s and enrolment request %s to %s", personId, enrollmentRequest, resultsURI));
@@ -318,12 +317,12 @@ public class EnrollmentEndpoint {
             ResponseEntity exchanged = restTemplate.exchange(resultsURI, HttpMethod.POST, requestEntity, Void.class);
             LOG.debug(String.format("Received answer from %s with status %s", resultsURI, exchanged.getStatusCode()));
             return exchanged;
-        } catch (RestClientException e) {
+        } catch (HttpStatusCodeException e) {
             return this.errorResponseEntity("Error from the OOAPI results endpoint for enrolment request:" + enrollmentRequest, e);
         }
     }
 
-    private ResponseEntity<Map<String, Object>> errorResponseEntity(String description, RestClientException e) {
+    private ResponseEntity<Map<String, Object>> errorResponseEntity(String description, HttpStatusCodeException e) {
         LOG.error(description, e);
 
         Map<String, Object> results = new HashMap<>();
@@ -331,8 +330,7 @@ public class EnrollmentEndpoint {
         results.put("message", e.getMessage());
         results.put("description", description);
         //Preserve the status from the Exception
-        HttpStatus status = e instanceof HttpStatusCodeException ? ((HttpStatusCodeException) e).getStatusCode() : HttpStatus.BAD_GATEWAY;
-        return ResponseEntity.status(status).body(results);
+        return ResponseEntity.status(e.getStatusCode()).body(results);
     }
 
     private Map<String, Object> person(EnrollmentRequest enrollmentRequest) {

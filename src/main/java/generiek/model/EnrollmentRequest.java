@@ -45,9 +45,6 @@ public class EnrollmentRequest implements Serializable {
     @Column(name = "person_uri")
     private String personURI;
 
-    @Column(name = "results_uri")
-    private String resultsURI;
-
     @Column(name = "home_institution")
     private String homeInstitution;
 
@@ -73,7 +70,6 @@ public class EnrollmentRequest implements Serializable {
         validate(enrollmentRequest);
         this.personURI = enrollmentRequest.personURI;
         this.personAuth = enrollmentRequest.personAuth;
-        this.resultsURI = enrollmentRequest.resultsURI;
         this.homeInstitution = enrollmentRequest.homeInstitution;
         this.scope = enrollmentRequest.scope;
         this.setIdentifier(UUID.randomUUID().toString());
@@ -92,7 +88,6 @@ public class EnrollmentRequest implements Serializable {
         result.put("a", this.personAuth);
         result.put("h", this.homeInstitution);
         result.put("p", this.personURI);
-        result.put("r", this.resultsURI);
         result.put("s", this.scope);
         byte[] bytes = objectMapper.writeValueAsBytes(result);
 
@@ -116,7 +111,6 @@ public class EnrollmentRequest implements Serializable {
         enrollmentRequest.setPersonAuth(map.get("a"));
         enrollmentRequest.setHomeInstitution(map.get("h"));
         enrollmentRequest.setPersonURI(map.get("p"));
-        enrollmentRequest.setResultsURI(map.get("r"));
         enrollmentRequest.setScope(map.get("s"));
         enrollmentRequest.setIdentifier(UUID.randomUUID().toString());
         enrollmentRequest.setCreated(Instant.now());

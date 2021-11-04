@@ -112,6 +112,232 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
         doPlayReportBackResults(correlationId);
     }
 
+    @Test
+    void invalidServiceRegistryEndpoint() throws JsonProcessingException {
+        stubFor(post(urlPathMatching("/api/validate-service-registry-endpoints")).willReturn(aResponse()
+                .withHeader("Content-Type", "application/json")
+                .withBody(objectMapper.writeValueAsString(Collections.singletonMap("valid", false)))));
+
+        String location = given().redirects().follow(false)
+                .when()
+                .header("Content-Type", APPLICATION_FORM_URLENCODED_VALUE)
+                .param("personURI", "http://localhost:8081/person")
+                .param("personAuth", PersonAuthentication.HEADER.name())
+                .param("homeInstitution", "schac.home")
+                .param("scope", "write")
+                .post("/api/enrollment")
+                .header("Location");
+        assertEquals("http://localhost:3003?error=Invalid enrollmentRequest", location);
+    }
+
+    @Test
+    void invalidTokenResult() throws Exception {
+        String state = doAuthorize(PersonAuthentication.HEADER.name());
+
+        String accessToken = accessToken(new HashMap<>());
+        Map<String, String> tokenResult = new HashMap<>();
+        tokenResult.put("access_token", accessToken);
+        tokenResult.put("refresh_token", accessToken);
+        tokenResult.put("id_token", accessToken);
+
+        stubFor(post(urlPathMatching("/oidc/token")).willReturn(aResponse()
+                .withHeader("Content-Type", "application/json")
+                .withBody(objectMapper.writeValueAsString(tokenResult))));
+
+        String location = given().redirects().follow(false)
+                .when()
+                .queryParam("code", "123456")
+                .queryParam("state", state)
+                .get("/redirect_uri")
+                .header("Location");
+        assertEquals("http://localhost:3003?error=eduid is required. Check the ARP for RP:student.mobility.rp.localhost", location);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void tokenNotValid() throws Exception {
+        String state = doAuthorize(PersonAuthentication.HEADER.name());
+        String correlationId = doToken(state);
+        doStart(correlationId, PersonAuthentication.HEADER.name());
+
+        stubFor(post(urlPathMatching("/oidc/token")).willReturn(aResponse()
+                .withStatus(500)));
+
+        EnrollmentRequest enrollmentRequest = enrollmentRepository.findByIdentifier(correlationId).get();
+        Map<String, Object> results = objectMapper.readValue(readFile("data/results.json"), Map.class);
+        results.put("personId", enrollmentRequest.getEduid());
+
+        Map<String, Object> res = given()
+                .when()
+                .contentType(ContentType.JSON)
+                .accept(ContentType.JSON)
+                .auth().basic("sis", "secret")
+                .body(results)
+                .post("/api/results")
+                .as(Map.class);
+
+        assertTrue(((String) res.get("description")).startsWith("Error in obtaining new accessToken"));
+        assertEquals(true, res.get("error"));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void resultsUriNotValid() throws Exception {
+        String state = doAuthorize(PersonAuthentication.HEADER.name());
+        String correlationId = doToken(state);
+        doStart(correlationId, PersonAuthentication.HEADER.name());
+
+        Map<String, String> tokenResult = Collections.singletonMap("access_token", UUID.randomUUID().toString());
+        stubFor(post(urlPathMatching("/oidc/token")).willReturn(aResponse()
+                .withHeader("Content-Type", "application/json")
+                .withBody(objectMapper.writeValueAsString(tokenResult))));
+
+        stubFor(post(urlPathMatching("/api/results-uri")).willReturn(aResponse()
+                .withStatus(400)));
+
+        EnrollmentRequest enrollmentRequest = enrollmentRepository.findByIdentifier(correlationId).get();
+        Map<String, Object> results = objectMapper.readValue(readFile("data/results.json"), Map.class);
+        results.put("personId", enrollmentRequest.getEduid());
+
+        Map<String, Object> res = given()
+                .when()
+                .contentType(ContentType.JSON)
+                .accept(ContentType.JSON)
+                .auth().basic("sis", "secret")
+                .body(results)
+                .post("/api/results")
+                .as(Map.class);
+
+        assertTrue(((String) res.get("description")).startsWith("Error in obtaining resultsURI"));
+        assertEquals(true, res.get("error"));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void ooApiResultsNotValid() throws Exception {
+        String state = doAuthorize(PersonAuthentication.HEADER.name());
+        String correlationId = doToken(state);
+        doStart(correlationId, PersonAuthentication.HEADER.name());
+
+        Map<String, String> tokenResult = Collections.singletonMap("access_token", UUID.randomUUID().toString());
+
+        stubFor(post(urlPathMatching("/oidc/token")).willReturn(aResponse()
+                .withHeader("Content-Type", "application/json")
+                .withBody(objectMapper.writeValueAsString(tokenResult))));
+
+        stubFor(post(urlPathMatching("/api/results-uri")).willReturn(aResponse()
+                .withHeader("Content-Type", "application/json")
+                .withBody(objectMapper.writeValueAsString(Collections.singletonMap("resultsURI", "http://localhost:8081/results")))));
+
+        stubFor(post(urlPathMatching("/results")).willReturn(aResponse()
+                .withStatus(500)));
+
+
+        EnrollmentRequest enrollmentRequest = enrollmentRepository.findByIdentifier(correlationId).get();
+        Map<String, Object> results = objectMapper.readValue(readFile("data/results.json"), Map.class);
+        results.put("personId", enrollmentRequest.getEduid());
+
+        Map<String, Object> res = given()
+                .when()
+                .contentType(ContentType.JSON)
+                .accept(ContentType.JSON)
+                .auth().basic("sis", "secret")
+                .body(results)
+                .post("/api/results")
+                .as(Map.class);
+
+        assertTrue(((String) res.get("description")).startsWith("Error from the OOAPI results endpoint"));
+        assertEquals(true, res.get("error"));
+    }
+
+    @Test
+    void invalidEnrollmentRequest() throws Exception {
+        doAuthorize(PersonAuthentication.HEADER.name());
+
+        String accessToken = accessToken(Collections.singletonMap("eduid", "123456789"));
+        Map<String, String> tokenResult = new HashMap<>();
+        tokenResult.put("access_token", accessToken);
+        tokenResult.put("refresh_token", accessToken);
+        tokenResult.put("id_token", accessToken);
+
+        stubFor(post(urlPathMatching("/oidc/token")).willReturn(aResponse()
+                .withHeader("Content-Type", "application/json")
+                .withBody(objectMapper.writeValueAsString(tokenResult))));
+
+        String location = given().redirects().follow(false)
+                .when()
+                .queryParam("code", "123456")
+                .queryParam("state", "bogus")
+                .get("/redirect_uri")
+                .header("Location");
+        assertEquals("http://localhost:3003?error=Session lost. Please try again", location);
+    }
+
+    @Test
+    void tokenException() {
+        String state = doAuthorize(PersonAuthentication.HEADER.name());
+        stubFor(post(urlPathMatching("/oidc/token")).willReturn(aResponse()
+                .withStatus(400)));
+
+        String location = given().redirects().follow(false)
+                .when()
+                .queryParam("code", "123456")
+                .queryParam("state", state)
+                .get("/redirect_uri")
+                .then()
+                .statusCode(SC_MOVED_TEMPORARILY)
+                .extract()
+                .header("Location");
+        assertEquals("http://localhost:3003?error=Session lost. Please try again", location);
+    }
+
+    @Test
+    void personEndpointException() throws Exception {
+        String state = doAuthorize(PersonAuthentication.HEADER.name());
+        String correlationId = doToken(state);
+        String offering = readFile("data/offering.json");
+        stubFor(get(urlPathMatching("/person")).willReturn(aResponse()
+                .withStatus(500)));
+
+        Map result = given()
+                .when()
+                .contentType(ContentType.JSON)
+                .accept(ContentType.JSON)
+                .auth().basic("user", "secret")
+                .header("X-Correlation-ID", correlationId)
+                .body(offering)
+                .post("/api/start")
+                .as(Map.class);
+        assertTrue(((String) result.get("description")).startsWith("Error in retrieving person for enrollmentRequest"));
+        assertEquals(true, result.get("error"));
+    }
+
+    @Test
+    void registrationBrokerException() throws Exception {
+        String state = doAuthorize(PersonAuthentication.HEADER.name());
+        String correlationId = doToken(state);
+        String offering = readFile("data/offering.json");
+
+        stubFor(get(urlPathMatching("/person")).willReturn(aResponse()
+                .withHeader("Content-Type", "application/json")
+                .withBody(readFile("data/person.json"))));
+
+        stubFor(post(urlPathMatching("/intake")).willReturn(aResponse()
+                .withStatus(500)));
+
+        Map result = given()
+                .when()
+                .contentType(ContentType.JSON)
+                .accept(ContentType.JSON)
+                .auth().basic("user", "secret")
+                .header("X-Correlation-ID", correlationId)
+                .body(offering)
+                .post("/api/start")
+                .as(Map.class);
+        assertTrue(((String) result.get("description")).startsWith("Error in registration results"));
+        assertEquals(true, result.get("error"));
+    }
+
     @SneakyThrows
     private String doAuthorize(String personAuth) {
         stubFor(post(urlPathMatching("/api/validate-service-registry-endpoints")).willReturn(aResponse()
@@ -137,7 +363,12 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
 
 
     private String doToken(String state) throws NoSuchProviderException, NoSuchAlgorithmException, JOSEException, IOException {
-        String accessToken = accessToken();
+        Map<String, String> claims = new HashMap<>();
+        claims.put("family_name", "Doe");
+        claims.put("given_name", "John");
+        claims.put("eduid", "1234567890");
+
+        String accessToken = accessToken(claims);
         Map<String, String> tokenResult = new HashMap<>();
         tokenResult.put("access_token", accessToken);
         tokenResult.put("refresh_token", accessToken);
@@ -251,7 +482,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
         return IOUtils.toString(new ClassPathResource(path).getInputStream());
     }
 
-    private String accessToken() throws NoSuchProviderException, NoSuchAlgorithmException, JOSEException, IOException {
+    private String accessToken(Map<String, String> claims) throws NoSuchProviderException, NoSuchAlgorithmException, JOSEException, IOException {
         String keyId = "key_id";
         RSAKey rsaKey = generateRsaKey(keyId);
         JWKSet jwkSet = new JWKSet(rsaKey.toPublicJWK());
@@ -268,10 +499,8 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                 .claim("scope", Arrays.asList("openid", "profile"))
                 .issueTime(Date.from(Instant.now()))
                 .subject("subject")
-                .notBeforeTime(new Date(System.currentTimeMillis()))
-                .claim("family_name", "Doe")
-                .claim("given_name", "John")
-                .claim("eduid", "1234567890 ");
+                .notBeforeTime(new Date(System.currentTimeMillis()));
+        claims.forEach(builder::claim);
         JWTClaimsSet claimsSet = builder.build();
         JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.RS256).type(JOSEObjectType.JWT)
                 .keyID(keyId).build();
