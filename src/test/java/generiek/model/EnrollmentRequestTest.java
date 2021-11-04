@@ -19,7 +19,7 @@ class EnrollmentRequestTest {
         enrollmentRequest.setEduid("eduID");
         enrollmentRequest.setRefreshToken("refreshToken");
         String randomString = RandomStringUtils.randomAscii(250);
-        enrollmentRequest.setResultsURI("https://results.uu.university.com" + randomString);
+        enrollmentRequest.setHomeInstitution("uu.utrecht" + randomString);
         enrollmentRequest.setPersonAuth(PersonAuthentication.HEADER.name());
         enrollmentRequest.setPersonURI("https://results.uu.university.com" + randomString);
         enrollmentRequest.setScope("https://long.scope.uri.at.somewhere" + randomString);
@@ -38,7 +38,7 @@ class EnrollmentRequestTest {
 
         assertEquals(enrollmentRequest.getPersonURI(), newEnrollmentRequest.getPersonURI());
         assertEquals(enrollmentRequest.getScope(), newEnrollmentRequest.getScope());
-        assertEquals(enrollmentRequest.getResultsURI(), newEnrollmentRequest.getResultsURI());
+        assertEquals(enrollmentRequest.getHomeInstitution(), newEnrollmentRequest.getHomeInstitution());
         assertEquals(enrollmentRequest.getPersonAuth(), newEnrollmentRequest.getPersonAuth());
         assertNotNull(newEnrollmentRequest.getIdentifier());
         assertNotNull(newEnrollmentRequest.getCreated());

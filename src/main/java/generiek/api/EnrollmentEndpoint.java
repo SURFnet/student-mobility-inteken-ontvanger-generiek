@@ -1,5 +1,8 @@
 package generiek.api;
 
+import generiek.ServiceRegistry;
+import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.web.client.RestClientException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
@@ -35,7 +38,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.View;
 import org.springframework.web.servlet.view.RedirectView;
@@ -68,7 +70,7 @@ public class EnrollmentEndpoint {
     private final String backendApiUser;
     private final String backendApiPassword;
     private final String brokerUrl;
-    private final URI validationServiceRegistryEndpoint;
+    private final ServiceRegistry serviceRegistry;
     private final boolean allowPlayground;
     private final EnrollmentRepository enrollmentRepository;
     private final ObjectMapper objectMapper;
@@ -89,9 +91,9 @@ public class EnrollmentEndpoint {
                               @Value("${backend.api_user}") String backendApiUser,
                               @Value("${backend.api_password}") String backendApiPassword,
                               @Value("${broker.url}") String brokerUrl,
-                              @Value("${broker.validation_service_registry_endpoint}") URI validationServiceRegistryEndpoint,
                               @Value("${features.allow_playground}") boolean allowPlayground,
                               EnrollmentRepository enrollmentRepository,
+                              ServiceRegistry serviceRegistry,
                               ObjectMapper objectMapper) {
         this.acr = acr;
         this.clientId = clientId;
@@ -104,8 +106,8 @@ public class EnrollmentEndpoint {
         this.backendApiUser = backendApiUser;
         this.backendApiPassword = backendApiPassword;
         this.brokerUrl = brokerUrl;
-        this.validationServiceRegistryEndpoint = validationServiceRegistryEndpoint;
         this.enrollmentRepository = enrollmentRepository;
+        this.serviceRegistry = serviceRegistry;
         this.objectMapper = objectMapper;
         this.allowPlayground = allowPlayground;
         this.restTemplate.setInterceptors(Collections.singletonList((request, body, execution) -> {
@@ -124,9 +126,9 @@ public class EnrollmentEndpoint {
         // Prevent forgery and cherry-pick attributes
         try {
             enrollmentRequest = new EnrollmentRequest(enrollmentRequest);
-            // Check the broker-serviceregistry to validate the personURI and resultURI before continuing
+            // Check the broker-serviceregistry to validate the personURI and homeInstitution before continuing
             this.validateServiceRegistryEndpoints(enrollmentRequest);
-        } catch (IllegalArgumentException e) {
+        } catch (RuntimeException e) {
             String redirect = String.format("%s?error=%s", brokerUrl, "Invalid enrollmentRequest");
             return new RedirectView(redirect, false);
         }
@@ -150,7 +152,15 @@ public class EnrollmentEndpoint {
         map.add("grant_type", "authorization_code");
         map.add("redirect_uri", redirectUri);
 
-        Map<String, Object> body = tokenRequest(map);
+        Map<String, Object> body;
+        try {
+            body = tokenRequest(map);
+        } catch (RestClientException e) {
+            LOG.error("Exception in token request", e);
+
+            String redirect = String.format("%s?error=%s", brokerUrl, "Session lost. Please try again");
+            return new RedirectView(redirect, false);
+        }
 
         String accessToken = (String) body.get("access_token");
         String refreshToken = (String) body.get("refresh_token");
@@ -167,13 +177,14 @@ public class EnrollmentEndpoint {
 
         String eduid = claimsSet.getStringClaim("eduid");
         if (!StringUtils.hasText(eduid)) {
-            throw new IllegalArgumentException("eduid is required. Check the ARP for RP:" + this.clientId);
+            String redirect = String.format("%s?error=%s", brokerUrl, "eduid is required. Check the ARP for RP:" + this.clientId);
+            return new RedirectView(redirect, false);
         }
         EnrollmentRequest enrollmentRequest;
         try {
             enrollmentRequest = EnrollmentRequest.serializeFromBase64(objectMapper, state);
         } catch (IllegalArgumentException | IOException e) {
-            LOG.error("Redirect after authorization called and no valid enrollment request");
+            LOG.error("Redirect after authorization called and no valid enrollment request", e);
 
             String redirect = String.format("%s?error=%s", brokerUrl, "Session lost. Please try again");
             return new RedirectView(redirect, false);
@@ -206,7 +217,7 @@ public class EnrollmentEndpoint {
     }
 
     /*
-     * Start the actual enrollment based on the data returned in the me endpoint
+     * Start the actual enrollment based on the data returned from the 'me' endpoint
      */
     @PostMapping("/api/start")
     public ResponseEntity<Map<String, Object>> start(
@@ -223,9 +234,8 @@ public class EnrollmentEndpoint {
         Map<String, Object> personMap;
         try {
             personMap = person(enrollmentRequest);
-        } catch (HttpClientErrorException e) {
-            //Preserve the status from the home institution
-            return ResponseEntity.status(e.getStatusCode()).build();
+        } catch (HttpStatusCodeException e) {
+            return this.errorResponseEntity("Error in retrieving person for enrollmentRequest: " + enrollmentRequest, e);
         }
         LOG.debug(String.format("Replacing personId %s with eduID %s", personMap.get("personId"), enrollmentRequest.getEduid()));
         personMap.put("personId", enrollmentRequest.getEduid());
@@ -236,9 +246,11 @@ public class EnrollmentEndpoint {
         HttpEntity<Map<String, Object>> httpEntity = new HttpEntity(body, httpHeaders);
 
         LOG.debug("Returning registration result to broker");
-
-        ResponseEntity<Map<String, Object>> responseEntity = restTemplate.exchange(backendUrl, HttpMethod.POST, httpEntity, mapRef);
-        return responseEntity;
+        try {
+            return restTemplate.exchange(backendUrl, HttpMethod.POST, httpEntity, mapRef);
+        } catch (HttpStatusCodeException e) {
+            return this.errorResponseEntity("Error in registration results for enrollmentRequest: " + enrollmentRequest, e);
+        }
     }
 
     /*
@@ -256,11 +268,11 @@ public class EnrollmentEndpoint {
     }
 
     /*
-     * Called by the SIS of the guest institution to report back results that need to be send with oauth secured
+     * Called by the SIS of the guest institution to report back results that need to be sent with oauth secured
      * to the home institution
      */
     @PostMapping("/api/results")
-    public ResponseEntity<Void> results(@RequestBody Map<String, Object> results) {
+    public ResponseEntity results(@RequestBody Map<String, Object> results) {
         String personId = (String) results.get("personId");
 
         List<EnrollmentRequest> enrollmentRequests = enrollmentRepository.findByEduidOrderByCreatedDesc(personId);
@@ -279,11 +291,21 @@ public class EnrollmentEndpoint {
 
         LOG.debug("Obtaining new accessToken with saved refreshToken for enrolment request: " + enrollmentRequest);
 
-        Map<String, Object> oidcResponse = tokenRequest(map);
-
+        Map<String, Object> oidcResponse;
+        try {
+            oidcResponse = tokenRequest(map);
+        } catch (HttpStatusCodeException e) {
+            return this.errorResponseEntity(
+                    "Error in obtaining new accessToken with saved refreshToken for enrolment request:" + enrollmentRequest, e);
+        }
         String accessToken = (String) oidcResponse.get("access_token");
-        String resultsURI = enrollmentRequest.getResultsURI();
-
+        String resultsURI;
+        try {
+            resultsURI = serviceRegistry.resultsURI(enrollmentRequest);
+        } catch (HttpStatusCodeException e) {
+            return this.errorResponseEntity(
+                    "Error in obtaining resultsURI for enrolment request:" + enrollmentRequest, e);
+        }
         //Now call the actual OOAPI endpoint with the new accessToken
         LOG.debug(String.format("Posting back results endpoint for personId %s and enrolment request %s to %s", personId, enrollmentRequest, resultsURI));
 
@@ -291,12 +313,24 @@ public class EnrollmentEndpoint {
         Map<String, Object> body = new EnrollmentResult(results).transform();
         HttpEntity<Void> requestEntity = new HttpEntity(body, httpHeaders);
 
-        ResponseEntity<Void> exchanged = restTemplate.exchange(resultsURI, HttpMethod.POST, requestEntity, Void.class);
+        try {
+            ResponseEntity exchanged = restTemplate.exchange(resultsURI, HttpMethod.POST, requestEntity, Void.class);
+            LOG.debug(String.format("Received answer from %s with status %s", resultsURI, exchanged.getStatusCode()));
+            return exchanged;
+        } catch (HttpStatusCodeException e) {
+            return this.errorResponseEntity("Error from the OOAPI results endpoint for enrolment request:" + enrollmentRequest, e);
+        }
+    }
 
-        LOG.debug(String.format("Received answer from %s with status %s", resultsURI, exchanged.getStatusCode()));
-        //cleanup
-        enrollmentRepository.deleteAll(enrollmentRequests);
-        return exchanged;
+    private ResponseEntity<Map<String, Object>> errorResponseEntity(String description, HttpStatusCodeException e) {
+        LOG.error(description, e);
+
+        Map<String, Object> results = new HashMap<>();
+        results.put("error", true);
+        results.put("message", e.getMessage());
+        results.put("description", description);
+        //Preserve the status from the Exception
+        return ResponseEntity.status(e.getStatusCode()).body(results);
     }
 
     private Map<String, Object> person(EnrollmentRequest enrollmentRequest) {
@@ -354,15 +388,11 @@ public class EnrollmentEndpoint {
     @SneakyThrows
     private void validateServiceRegistryEndpoints(EnrollmentRequest enrollmentRequest) {
         LOG.debug(String.format("Calling validate enrollmentRequest with %s", enrollmentRequest));
-
-        ResponseEntity<Map> response = restTemplate.postForEntity(
-                this.validationServiceRegistryEndpoint,
-                new HttpEntity<>(enrollmentRequest),
-                Map.class);
-        if (!(boolean) response.getBody().get("valid")) {
+        Map<String, Boolean> results = serviceRegistry.validate(enrollmentRequest);
+        if (!(boolean) results.get("valid")) {
             throw new IllegalArgumentException(
                     String.format("Invalid URI's for enrolment %s provided reported by %s",
-                            enrollmentRequest, this.validationServiceRegistryEndpoint));
+                            enrollmentRequest, this.serviceRegistry.getServiceRegistryBaseURL()));
         }
     }
 

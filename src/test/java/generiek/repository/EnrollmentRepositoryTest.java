@@ -23,7 +23,7 @@ class EnrollmentRepositoryTest {
         enrollmentRequest.setIdentifier("forgery");
         enrollmentRequest.setPersonURI("https://www.test.org");
         enrollmentRequest.setPersonAuth(PersonAuthentication.HEADER.name());
-        enrollmentRequest.setResultsURI("https://www.test.org");
+        enrollmentRequest.setHomeInstitution("uu.utrecht");
         enrollmentRequest.setScope("inteken");
 
         enrollmentRequest = new EnrollmentRequest(enrollmentRequest);

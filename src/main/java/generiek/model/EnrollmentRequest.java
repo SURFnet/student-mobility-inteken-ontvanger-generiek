@@ -45,8 +45,8 @@ public class EnrollmentRequest implements Serializable {
     @Column(name = "person_uri")
     private String personURI;
 
-    @Column(name = "results_uri")
-    private String resultsURI;
+    @Column(name = "home_institution")
+    private String homeInstitution;
 
     @Column(name = "person_auth")
     private String personAuth;
@@ -70,7 +70,7 @@ public class EnrollmentRequest implements Serializable {
         validate(enrollmentRequest);
         this.personURI = enrollmentRequest.personURI;
         this.personAuth = enrollmentRequest.personAuth;
-        this.resultsURI = enrollmentRequest.resultsURI;
+        this.homeInstitution = enrollmentRequest.homeInstitution;
         this.scope = enrollmentRequest.scope;
         this.setIdentifier(UUID.randomUUID().toString());
         this.setCreated(Instant.now());
@@ -79,15 +79,15 @@ public class EnrollmentRequest implements Serializable {
     private void validate(EnrollmentRequest enrollmentRequest) {
         Assert.notNull(enrollmentRequest.personURI, "personURI is required");
         Assert.notNull(enrollmentRequest.personAuth, "personAuth is required");
-        Assert.notNull(enrollmentRequest.resultsURI, "resultsURI is required");
+        Assert.notNull(enrollmentRequest.homeInstitution, "homeInstitution is required");
         Assert.notNull(enrollmentRequest.scope, "scope is required");
     }
 
     public String serializeToBase64(ObjectMapper objectMapper) throws IOException {
         Map<String, String> result = new HashMap<>();
-        result.put("p", this.personURI);
         result.put("a", this.personAuth);
-        result.put("r", this.resultsURI);
+        result.put("h", this.homeInstitution);
+        result.put("p", this.personURI);
         result.put("s", this.scope);
         byte[] bytes = objectMapper.writeValueAsBytes(result);
 
@@ -108,9 +108,9 @@ public class EnrollmentRequest implements Serializable {
         Map<String, String> map = objectMapper.readValue(json, Map.class);
 
         EnrollmentRequest enrollmentRequest = new EnrollmentRequest();
-        enrollmentRequest.setPersonURI(map.get("p"));
         enrollmentRequest.setPersonAuth(map.get("a"));
-        enrollmentRequest.setResultsURI(map.get("r"));
+        enrollmentRequest.setHomeInstitution(map.get("h"));
+        enrollmentRequest.setPersonURI(map.get("p"));
         enrollmentRequest.setScope(map.get("s"));
         enrollmentRequest.setIdentifier(UUID.randomUUID().toString());
         enrollmentRequest.setCreated(Instant.now());
