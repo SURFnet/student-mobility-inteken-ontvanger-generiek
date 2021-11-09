@@ -2,11 +2,8 @@
 # Change Log
 All notable changes to this project will be documented in this file.
  
-## [Unreleased]
  
-
- 
-## [0.0.9] - 2021-11-09
+## [0.0.9] - Unreleased
   
 ### Changed
 - Return error messages to broker (instead of whitelabel error pages)
