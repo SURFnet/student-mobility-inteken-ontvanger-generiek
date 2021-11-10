@@ -16,10 +16,21 @@ spring:
     properties:
       hibernate:
         naming-strategy: org.hibernate.cfg.ImprovedNamingStrategy
+#        dialect: org.hibernate.dialect.PostgreSQL10Dialect
         dialect: org.hibernate.dialect.H2Dialect
   datasource:
     driver-class-name: org.h2.Driver
     url: jdbc:h2:file:./database/student-mobility
+#    driver-class-name: org.postgresql.Driver
+#    url: jdbc:postgresql://localhost:5432/mobility
+#    username: mobility_rw
+#    password: secret
+  sql:
+    init:
+      platform: h2
+#      platform: postgresql
+  flyway:
+    locations: classpath:db/{vendor}/migration
 
 features:
   # Do we allow to mock the different scenario's - only allow on test
