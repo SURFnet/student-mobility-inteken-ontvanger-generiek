@@ -25,10 +25,6 @@ spring:
 #    url: jdbc:postgresql://localhost:5432/mobility
 #    username: mobility_rw
 #    password: secret
-  sql:
-    init:
-      platform: h2
-#      platform: postgresql
   flyway:
     locations: classpath:db/{vendor}/migration
 
