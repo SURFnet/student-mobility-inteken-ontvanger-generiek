@@ -1,8 +1,10 @@
 # student-mobility-inteken-ontvanger-generiek
+
 [![Build Status](https://github.com/SURFnet/student-mobility-inteken-ontvanger-generiek/actions/workflows/maven.yml/badge.svg)](https://github.com/SURFnet/student-mobility-inteken-ontvanger-generiek/actions/workflows/maven.yml/badge.svg)
 [![codecov](https://codecov.io/gh/SURFnet/student-mobility-inteken-ontvanger-generiek/branch/main/graph/badge.svg)](https://codecov.io/gh/SURFnet/student-mobility-inteken-ontvanger-generiek)
 
-Generic part of the institution hosted part of the broker for educational cross-institution registrations.
+Generic part of the institution hosted part of the broker for educational
+cross-institution registrations.
 
 ## [Getting started](#getting-started)
 
@@ -17,7 +19,7 @@ Generic part of the institution hosted part of the broker for educational cross-
 
 This project uses Spring Boot and Maven. To run locally, type:
 
-```
+```bash
 mvn spring-boot:run
 ```
 
