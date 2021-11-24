@@ -316,7 +316,7 @@ public class EnrollmentEndpoint {
         try {
             ResponseEntity exchanged = restTemplate.exchange(resultsURI, HttpMethod.POST, requestEntity, Void.class);
             LOG.debug(String.format("Received answer from %s with status %s", resultsURI, exchanged.getStatusCode()));
-            return exchanged;
+            return ResponseEntity.ok().body(exchanged.getBody());
         } catch (HttpStatusCodeException e) {
             return this.errorResponseEntity("Error from the OOAPI results endpoint for enrolment request:" + enrollmentRequest, e);
         }
