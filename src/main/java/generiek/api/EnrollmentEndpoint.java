@@ -299,6 +299,13 @@ public class EnrollmentEndpoint {
                     "Error in obtaining new accessToken with saved refreshToken for enrolment request:" + enrollmentRequest, e);
         }
         String accessToken = (String) oidcResponse.get("access_token");
+        String refreshToken = (String) oidcResponse.get("refresh_token");
+
+        //If all went well, save the new access token and refresh token in the enrollment request
+        enrollmentRequest.setAccessToken(accessToken);
+        enrollmentRequest.setRefreshToken(refreshToken);
+        enrollmentRepository.save(enrollmentRequest);
+
         String resultsURI;
         try {
             resultsURI = serviceRegistry.resultsURI(enrollmentRequest);
@@ -316,7 +323,7 @@ public class EnrollmentEndpoint {
         try {
             ResponseEntity exchanged = restTemplate.exchange(resultsURI, HttpMethod.POST, requestEntity, Void.class);
             LOG.debug(String.format("Received answer from %s with status %s", resultsURI, exchanged.getStatusCode()));
-            return exchanged;
+            return ResponseEntity.ok().body(exchanged.getBody());
         } catch (HttpStatusCodeException e) {
             return this.errorResponseEntity("Error from the OOAPI results endpoint for enrolment request:" + enrollmentRequest, e);
         }

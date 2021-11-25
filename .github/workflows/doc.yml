@@ -1,0 +1,17 @@
+name: check-doc
+
+# Triggers the workflow on push or pull request events
+on: [push, pull_request]
+
+jobs:
+  test-redoc:
+    runs-on: ubuntu-latest
+    name: Lint documentation markup
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: lint all md files
+        uses: nosborn/github-action-markdown-cli@v2.0.0
+        with:
+          files: .
