@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 - Return error messages to broker (instead of whitelabel error pages)
 - Do not store the resultsendpoint, but save the homeinstitution and get the
 resultendpoint from service-registry when sending the sesult.
+- Store the access- and refreshtoken when refreshed
 
 ### Config changes
 
