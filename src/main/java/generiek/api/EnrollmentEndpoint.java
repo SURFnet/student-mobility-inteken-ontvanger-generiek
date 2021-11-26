@@ -327,7 +327,7 @@ public class EnrollmentEndpoint {
             return ResponseEntity.ok().body(exchanged.getBody());
         } catch (HttpStatusCodeException e) {
             LOG.error(String.format("Error %s from the OOAPI results endpoint for enrolment request: %s. Message: %s", e.getStatusCode(), enrollmentRequest, e.getMessage()));
-            String responseBody = (exchanged!=null) ? exchanged.getBody().toString() : "No content";
+            String responseBody = (exchanged != null) ? exchanged.getBody().toString() : "No content";
             return ResponseEntity.status(e.getStatusCode()).body(responseBody);
         }
     }

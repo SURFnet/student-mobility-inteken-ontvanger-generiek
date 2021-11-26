@@ -237,17 +237,15 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
         Map<String, Object> results = objectMapper.readValue(readFile("data/results.json"), Map.class);
         results.put("personId", enrollmentRequest.getEduid());
 
-        Map<String, Object> res = given()
+        given()
                 .when()
                 .contentType(ContentType.JSON)
                 .accept(ContentType.JSON)
                 .auth().basic("sis", "secret")
                 .body(results)
                 .post("/api/results")
-                .as(Map.class);
-
-        assertTrue(((String) res.get("description")).startsWith("Error from the OOAPI results endpoint"));
-        assertEquals(true, res.get("error"));
+                .then()
+                .statusCode(500);
     }
 
     @Test
