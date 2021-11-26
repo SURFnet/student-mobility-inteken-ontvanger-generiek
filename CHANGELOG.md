@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 - Do not store the resultsendpoint, but save the homeinstitution and get the
 resultendpoint from service-registry when sending the sesult.
 - Store the access- and refreshtoken when refreshed
+- Return errors from remote results-endpoint to SIS
 
 ### Config changes
 
