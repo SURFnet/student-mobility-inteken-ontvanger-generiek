@@ -320,15 +320,13 @@ public class EnrollmentEndpoint {
         Map<String, Object> body = new EnrollmentResult(results).transform();
         HttpEntity<Void> requestEntity = new HttpEntity(body, httpHeaders);
 
-        ResponseEntity exchanged = null;
         try {
-            exchanged = restTemplate.exchange(resultsURI, HttpMethod.POST, requestEntity, Void.class);
+            ResponseEntity exchanged = restTemplate.exchange(resultsURI, HttpMethod.POST, requestEntity, Void.class);
             LOG.debug(String.format("Received answer from %s with status %s", resultsURI, exchanged.getStatusCode()));
             return ResponseEntity.ok().body(exchanged.getBody());
         } catch (HttpStatusCodeException e) {
             LOG.error(String.format("Error %s from the OOAPI results endpoint for enrolment request: %s. Message: %s", e.getStatusCode(), enrollmentRequest, e.getMessage()));
-            String responseBody = (exchanged != null) ? exchanged.getBody().toString() : "No content";
-            return ResponseEntity.status(e.getStatusCode()).body(responseBody);
+            return ResponseEntity.status(e.getStatusCode()).body(e.getResponseBodyAsString());
         }
     }
 
