@@ -130,6 +130,7 @@ public class EnrollmentEndpoint {
             // Check the broker-serviceregistry to validate the personURI and homeInstitution before continuing
             this.validateServiceRegistryEndpoints(enrollmentRequest);
         } catch (RuntimeException e) {
+            LOG.debug("Invalid enrollmentRequest: " + enrollmentRequest);
             String redirect = String.format("%s?error=%s", brokerUrl, "Invalid enrollmentRequest");
             return new RedirectView(redirect, false);
         }
@@ -236,6 +237,7 @@ public class EnrollmentEndpoint {
         try {
             personMap = person(enrollmentRequest);
         } catch (HttpStatusCodeException e) {
+            LOG.debug("Error in retrieving person for enrollmentRequest: " + enrollmentRequest);
             return this.errorResponseEntity("Error in retrieving person for enrollmentRequest: " + enrollmentRequest, e);
         }
         LOG.debug(String.format("Replacing personId %s with eduID %s", personMap.get("personId"), enrollmentRequest.getEduid()));
@@ -250,6 +252,7 @@ public class EnrollmentEndpoint {
         try {
             return restTemplate.exchange(backendUrl, HttpMethod.POST, httpEntity, mapRef);
         } catch (HttpStatusCodeException e) {
+            LOG.debug("Error in registration results for enrollmentRequest: " + enrollmentRequest);
             return this.errorResponseEntity("Error in registration results for enrollmentRequest: " + enrollmentRequest, e);
         }
     }
@@ -278,6 +281,7 @@ public class EnrollmentEndpoint {
 
         List<EnrollmentRequest> enrollmentRequests = enrollmentRepository.findByEduidOrderByCreatedDesc(personId);
         if (CollectionUtils.isEmpty(enrollmentRequests)) {
+            LOG.debug(String.format("Enrollment not found for :", personId));
             throw new ExpiredEnrollmentRequestException();
         }
         EnrollmentRequest enrollmentRequest = enrollmentRequests.get(0);
@@ -296,6 +300,7 @@ public class EnrollmentEndpoint {
         try {
             oidcResponse = tokenRequest(map);
         } catch (HttpStatusCodeException e) {
+            LOG.debug("Error in obtaining new accessToken with saved refreshToken for enrolment request:" + enrollmentRequest);
             return this.errorResponseEntity(
                     "Error in obtaining new accessToken with saved refreshToken for enrolment request:" + enrollmentRequest, e);
         }
@@ -311,6 +316,7 @@ public class EnrollmentEndpoint {
         try {
             resultsURI = serviceRegistry.resultsURI(enrollmentRequest);
         } catch (HttpStatusCodeException e) {
+            LOG.debug("Error in obtaining resultsURI for enrolment request:" + enrollmentRequest);
             return this.errorResponseEntity(
                     "Error in obtaining resultsURI for enrolment request:" + enrollmentRequest, e);
         }
