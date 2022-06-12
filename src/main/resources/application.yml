@@ -70,7 +70,13 @@ info:
 
 management:
   endpoints:
-    enabled-by-default: false
+    enabled-by-default: true
+    web:
+      exposure:
+        include:
+          - health
+          - info
+      base-path: "/internal"
   endpoint:
     health:
       enabled: true

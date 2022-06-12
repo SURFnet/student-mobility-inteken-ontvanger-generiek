@@ -15,7 +15,7 @@ class GenericApplicationTest {
         RestAssured.port = 8088;
         given()
                 .when()
-                .get("/actuator/health")
+                .get("/internal/health")
                 .then()
                 .statusCode(SC_OK)
                 .body("status", equalTo("UP"));
