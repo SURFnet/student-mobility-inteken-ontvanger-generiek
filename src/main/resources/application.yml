@@ -62,12 +62,6 @@ oidc:
   #            token-uri: http://localhost:8080/oidc/token
   #            jwk-set-uri: http://localhost:8080/oidc/certs
 
-# used by the git plugin
-info:
-  build:
-    artifact: "@project.artifactId@"
-    version: "@project.version@"
-
 management:
   endpoints:
     enabled-by-default: true
@@ -88,3 +82,9 @@ management:
       mode: full
     defaults:
       enabled: true
+
+# used by the git plugin
+info:
+  build:
+    artifact: "@project.artifactId@"
+    version: "@project.version@"

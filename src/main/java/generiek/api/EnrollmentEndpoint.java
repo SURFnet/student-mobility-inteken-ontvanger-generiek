@@ -1,10 +1,5 @@
 package generiek.api;
 
-import generiek.ServiceRegistry;
-import org.springframework.web.bind.WebDataBinder;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.client.HttpStatusCodeException;
-import org.springframework.web.client.RestClientException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
@@ -12,6 +7,7 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import generiek.LanguageFilter;
+import generiek.ServiceRegistry;
 import generiek.jwt.JWTValidator;
 import generiek.model.EnrollmentRequest;
 import generiek.model.PersonAuthentication;
@@ -23,16 +19,15 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.util.StringUtils;
+import org.springframework.web.bind.WebDataBinder;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.View;
 import org.springframework.web.servlet.view.RedirectView;
@@ -288,30 +283,6 @@ public class EnrollmentEndpoint {
 
         LOG.debug(String.format("Report back results endpoint called by SIS personId %s and enrolment request %s", personId, enrollmentRequest));
 
-        MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
-        map.add("client_id", clientId);
-        map.add("client_secret", clientSecret);
-        map.add("grant_type", "refresh_token");
-        map.add("refresh_token", enrollmentRequest.getRefreshToken());
-
-        LOG.debug("Obtaining new accessToken with saved refreshToken for enrolment request: " + enrollmentRequest);
-
-        Map<String, Object> oidcResponse;
-        try {
-            oidcResponse = tokenRequest(map);
-        } catch (HttpStatusCodeException e) {
-            LOG.error("Error in obtaining new accessToken with saved refreshToken for enrolment request:" + enrollmentRequest, e);
-            return this.errorResponseEntity(
-                    "Error in obtaining new accessToken with saved refreshToken for enrolment request:" + enrollmentRequest, e);
-        }
-        String accessToken = (String) oidcResponse.get("access_token");
-        String refreshToken = (String) oidcResponse.get("refresh_token");
-
-        //If all went well, save the new access token and refresh token in the enrollment request
-        enrollmentRequest.setAccessToken(accessToken);
-        enrollmentRequest.setRefreshToken(refreshToken);
-        enrollmentRepository.save(enrollmentRequest);
-
         String resultsURI;
         try {
             resultsURI = serviceRegistry.resultsURI(enrollmentRequest);
@@ -323,7 +294,16 @@ public class EnrollmentEndpoint {
         //Now call the actual OOAPI endpoint with the new accessToken
         LOG.debug(String.format("Posting back results endpoint for personId %s and enrolment request %s to %s", personId, enrollmentRequest, resultsURI));
 
-        HttpHeaders httpHeaders = getOidcAuthorizationHttpHeaders(accessToken, PersonAuthentication.HEADER.name());
+        return callResultsURI(enrollmentRequest, results, resultsURI, true);
+    }
+
+    private ResponseEntity callResultsURI(EnrollmentRequest enrollmentRequest,
+                                          Map<String, Object> results,
+                                          String resultsURI,
+                                          boolean retry) {
+        HttpHeaders httpHeaders = getOidcAuthorizationHttpHeaders(
+                enrollmentRequest.getAccessToken(),
+                PersonAuthentication.HEADER.name());
         Map<String, Object> body = new EnrollmentResult(results).transform();
         HttpEntity<Void> requestEntity = new HttpEntity(body, httpHeaders);
 
@@ -332,9 +312,44 @@ public class EnrollmentEndpoint {
             LOG.debug(String.format("Received answer from %s with status %s", resultsURI, exchanged.getStatusCode()));
             return ResponseEntity.ok().body(exchanged.getBody());
         } catch (HttpStatusCodeException e) {
-            LOG.error(String.format("Error %s from the OOAPI results endpoint for enrolment request: %s. Message: %s", e.getStatusCode(), enrollmentRequest, e.getMessage()));
-            return ResponseEntity.status(e.getStatusCode()).body(e.getResponseBodyAsString());
+            if (retry) {
+                try {
+                    EnrollmentRequest refreshedEnrollmentRequest = refreshTokens(enrollmentRequest);
+                    return callResultsURI(refreshedEnrollmentRequest, results, resultsURI, false);
+                } catch (HttpStatusCodeException e2) {
+                    LOG.error("Error in obtaining new accessToken with saved refreshToken for enrolment request:" + enrollmentRequest, e2);
+                    return this.errorResponseEntity(
+                            "Error in obtaining new accessToken with saved refreshToken for enrolment request:" + enrollmentRequest, e2);
+                }
+
+            } else {
+                LOG.error(String.format("Error %s from the OOAPI results endpoint for enrolment request: %s. Message: %s", e.getStatusCode(), enrollmentRequest, e.getMessage()));
+                return ResponseEntity.status(e.getStatusCode()).body(e.getResponseBodyAsString());
+            }
         }
+
+    }
+
+    private EnrollmentRequest refreshTokens(EnrollmentRequest enrollmentRequest) {
+        LOG.debug("Obtaining new accessToken with saved refreshToken for enrolment request: " + enrollmentRequest);
+
+        MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
+        map.add("client_id", clientId);
+        map.add("client_secret", clientSecret);
+        map.add("grant_type", "refresh_token");
+        map.add("refresh_token", enrollmentRequest.getRefreshToken());
+
+        Map<String, Object> oidcResponse = tokenRequest(map);
+        String accessToken = (String) oidcResponse.get("access_token");
+        String refreshToken = (String) oidcResponse.get("refresh_token");
+
+        //If all went well, save the new access token and refresh token in the enrollment request
+        enrollmentRequest.setAccessToken(accessToken);
+        enrollmentRequest.setRefreshToken(refreshToken);
+
+        enrollmentRepository.save(enrollmentRequest);
+
+        return enrollmentRequest;
     }
 
     private ResponseEntity<Map<String, Object>> errorResponseEntity(String description, HttpStatusCodeException e) {
