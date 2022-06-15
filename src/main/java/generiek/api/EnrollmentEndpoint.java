@@ -9,9 +9,11 @@ import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import generiek.LanguageFilter;
 import generiek.ServiceRegistry;
 import generiek.jwt.JWTValidator;
+import generiek.model.Association;
 import generiek.model.EnrollmentRequest;
 import generiek.model.PersonAuthentication;
 import generiek.ooapi.EnrollmentResult;
+import generiek.repository.AssociationRepository;
 import generiek.repository.EnrollmentRepository;
 import generiek.repository.ExpiredEnrollmentRequestException;
 import lombok.SneakyThrows;
@@ -63,6 +65,7 @@ public class EnrollmentEndpoint {
     private final ServiceRegistry serviceRegistry;
     private final boolean allowPlayground;
     private final EnrollmentRepository enrollmentRepository;
+    private final AssociationRepository associationRepository;
     private final ObjectMapper objectMapper;
 
     private final RestTemplate restTemplate = new RestTemplate();
@@ -83,6 +86,7 @@ public class EnrollmentEndpoint {
                               @Value("${broker.url}") String brokerUrl,
                               @Value("${features.allow_playground}") boolean allowPlayground,
                               EnrollmentRepository enrollmentRepository,
+                              AssociationRepository associationRepository,
                               ServiceRegistry serviceRegistry,
                               ObjectMapper objectMapper) {
         this.acr = acr;
@@ -97,6 +101,7 @@ public class EnrollmentEndpoint {
         this.backendApiPassword = backendApiPassword;
         this.brokerUrl = brokerUrl;
         this.enrollmentRepository = enrollmentRepository;
+        this.associationRepository = associationRepository;
         this.serviceRegistry = serviceRegistry;
         this.objectMapper = objectMapper;
         this.allowPlayground = allowPlayground;
@@ -256,7 +261,7 @@ public class EnrollmentEndpoint {
      * Called by the Broker on behalf of the test user
      */
     @PostMapping("/api/play-results")
-    public ResponseEntity<Void> playResults(@RequestHeader("X-Correlation-ID") String correlationId, @RequestBody Map<String, Object> results) {
+    public ResponseEntity<Map<String, Object>> playResults(@RequestHeader("X-Correlation-ID") String correlationId, @RequestBody Map<String, Object> results) {
         if (!allowPlayground) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
@@ -267,19 +272,43 @@ public class EnrollmentEndpoint {
     }
 
     /*
+     * Called by the SIS of the guest institution to inform the home institution of the status of the (pending)
+     * enrollment
+     */
+    @PostMapping("/associations/external/{personId}")
+    public ResponseEntity associate(@PathVariable("personId") String personId,
+                                    @RequestBody Map<String, Object> association) {
+        EnrollmentRequest enrollmentRequest = getEnrollmentRequest(personId);
+
+        LOG.debug(String.format("Associate endpoint called by SIS personId %s for enrolment request %s", personId, enrollmentRequest));
+
+        String associationURI;
+        try {
+            associationURI = serviceRegistry.associationsURI(enrollmentRequest);
+        } catch (HttpStatusCodeException e) {
+            LOG.error("Error in obtaining associationURI for enrolment request:" + enrollmentRequest, e);
+            return this.errorResponseEntity(
+                    "Error in obtaining associationURI for enrolment request:" + enrollmentRequest, e);
+        }
+        //Now call the actual OOAPI endpoint with the new accessToken
+        LOG.debug(String.format("Posting association endpoint for personId %s and enrolment request %s to %s", personId, enrollmentRequest, associationURI));
+
+        ResponseEntity<Map<String, Object>> responseEntity = exchangeToHomeInstitution(enrollmentRequest, association, associationURI, HttpMethod.POST, true);
+        String associationId = (String) responseEntity.getBody().get("associationId");
+        associationRepository.save(new Association(associationId, enrollmentRequest));
+        return responseEntity;
+    }
+
+
+    /*
      * Called by the SIS of the guest institution to report back results that need to be sent with oauth secured
      * to the home institution
      */
     @PostMapping("/api/results")
-    public ResponseEntity results(@RequestBody Map<String, Object> results) {
+    public ResponseEntity<Map<String, Object>> results(@RequestBody Map<String, Object> results) {
         String personId = (String) results.get("personId");
 
-        List<EnrollmentRequest> enrollmentRequests = enrollmentRepository.findByEduidOrderByCreatedDesc(personId);
-        if (CollectionUtils.isEmpty(enrollmentRequests)) {
-            LOG.debug(String.format("Enrollment not found for :", personId));
-            throw new ExpiredEnrollmentRequestException();
-        }
-        EnrollmentRequest enrollmentRequest = enrollmentRequests.get(0);
+        EnrollmentRequest enrollmentRequest = getEnrollmentRequest(personId);
 
         LOG.debug(String.format("Report back results endpoint called by SIS personId %s and enrolment request %s", personId, enrollmentRequest));
 
@@ -294,36 +323,47 @@ public class EnrollmentEndpoint {
         //Now call the actual OOAPI endpoint with the new accessToken
         LOG.debug(String.format("Posting back results endpoint for personId %s and enrolment request %s to %s", personId, enrollmentRequest, resultsURI));
 
-        return callResultsURI(enrollmentRequest, results, resultsURI, true);
+        Map<String, Object> body = new EnrollmentResult(results).transform();
+        return exchangeToHomeInstitution(enrollmentRequest, body, resultsURI, HttpMethod.POST, true);
     }
 
-    private ResponseEntity callResultsURI(EnrollmentRequest enrollmentRequest,
-                                          Map<String, Object> results,
-                                          String resultsURI,
-                                          boolean retry) {
+    private EnrollmentRequest getEnrollmentRequest(String personId) {
+        List<EnrollmentRequest> enrollmentRequests = enrollmentRepository.findByEduidOrderByCreatedDesc(personId);
+        if (CollectionUtils.isEmpty(enrollmentRequests)) {
+            LOG.debug(String.format("Enrollment not found for :", personId));
+            throw new ExpiredEnrollmentRequestException();
+        }
+        EnrollmentRequest enrollmentRequest = enrollmentRequests.get(0);
+        return enrollmentRequest;
+    }
+
+    private ResponseEntity<Map<String, Object>> exchangeToHomeInstitution(EnrollmentRequest enrollmentRequest,
+                                                                          Map<String, Object> body,
+                                                                          String uri,
+                                                                          HttpMethod httpMethod,
+                                                                          boolean retry) {
         HttpHeaders httpHeaders = getOidcAuthorizationHttpHeaders(
                 enrollmentRequest.getAccessToken(),
                 PersonAuthentication.HEADER.name());
-        Map<String, Object> body = new EnrollmentResult(results).transform();
-        HttpEntity<Void> requestEntity = new HttpEntity(body, httpHeaders);
+        HttpEntity<Map<String, Object>> requestEntity = new HttpEntity(body, httpHeaders);
 
         try {
-            ResponseEntity exchanged = restTemplate.exchange(resultsURI, HttpMethod.POST, requestEntity, Void.class);
-            LOG.debug(String.format("Received answer from %s with status %s", resultsURI, exchanged.getStatusCode()));
+            ResponseEntity<Map<String, Object>> exchanged = restTemplate.exchange(uri, httpMethod, requestEntity, mapRef);
+            LOG.debug(String.format("Received answer from %s with status %s", uri, exchanged.getStatusCode()));
             return ResponseEntity.ok().body(exchanged.getBody());
         } catch (HttpStatusCodeException e) {
             if (retry) {
                 try {
                     EnrollmentRequest refreshedEnrollmentRequest = refreshTokens(enrollmentRequest);
-                    return callResultsURI(refreshedEnrollmentRequest, results, resultsURI, false);
+                    return exchangeToHomeInstitution(refreshedEnrollmentRequest, body, uri, httpMethod, false);
                 } catch (HttpStatusCodeException e2) {
                     LOG.error("Error in obtaining new accessToken with saved refreshToken for enrolment request:" + enrollmentRequest, e2);
                     return this.errorResponseEntity(
                             "Error in obtaining new accessToken with saved refreshToken for enrolment request:" + enrollmentRequest, e2);
                 }
             } else {
-                LOG.error(String.format("Error %s from the OOAPI results endpoint for enrolment request: %s. Message: %s", e.getStatusCode(), enrollmentRequest, e.getMessage()));
-                return ResponseEntity.status(e.getStatusCode()).body(e.getResponseBodyAsString());
+                LOG.error(String.format("Error %s from the OOAPI endpoint for enrolment request: %s. Message: %s", e.getStatusCode(), enrollmentRequest, e.getMessage()));
+                return ResponseEntity.status(e.getStatusCode()).body(Collections.singletonMap("error", e.getResponseBodyAsString()));
             }
         }
     }

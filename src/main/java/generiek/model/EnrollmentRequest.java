@@ -1,5 +1,6 @@
 package generiek.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.util.IOUtils;
 import lombok.Getter;
@@ -8,11 +9,7 @@ import lombok.Setter;
 import lombok.ToString;
 import org.springframework.util.Assert;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
+import javax.persistence.*;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -21,10 +18,7 @@ import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.time.Instant;
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -50,6 +44,10 @@ public class EnrollmentRequest implements Serializable {
 
     @Column(name = "person_auth")
     private String personAuth;
+
+    @OneToMany(mappedBy = "enrollmentRequest", orphanRemoval = true)
+    @JsonIgnore
+    private Set<Association> associations = new HashSet<>();
 
     @Column
     private String eduid;
