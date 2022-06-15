@@ -1,6 +1,7 @@
 package generiek;
 
 import io.restassured.RestAssured;
+import io.restassured.http.ContentType;
 import org.junit.jupiter.api.Test;
 
 import static io.restassured.RestAssured.given;
@@ -19,5 +20,12 @@ class GenericApplicationTest {
                 .then()
                 .statusCode(SC_OK)
                 .body("status", equalTo("UP"));
+
+        given()
+                .accept(ContentType.JSON)
+                .when()
+                .get("/internal/info")
+                .then()
+                .body("build.artifact", equalTo("student-mobility-inteken-ontvanger-generiek"));
     }
 }
