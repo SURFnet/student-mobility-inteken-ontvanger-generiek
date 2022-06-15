@@ -16,6 +16,7 @@ class EnrollmentRequestTest {
     @Test
     void serialization() throws IOException {
         EnrollmentRequest enrollmentRequest = new EnrollmentRequest();
+        enrollmentRequest.setId(1L);
         enrollmentRequest.setEduid("eduID");
         enrollmentRequest.setRefreshToken("refreshToken");
         String randomString = RandomStringUtils.randomAscii(250);

@@ -321,13 +321,11 @@ public class EnrollmentEndpoint {
                     return this.errorResponseEntity(
                             "Error in obtaining new accessToken with saved refreshToken for enrolment request:" + enrollmentRequest, e2);
                 }
-
             } else {
                 LOG.error(String.format("Error %s from the OOAPI results endpoint for enrolment request: %s. Message: %s", e.getStatusCode(), enrollmentRequest, e.getMessage()));
                 return ResponseEntity.status(e.getStatusCode()).body(e.getResponseBodyAsString());
             }
         }
-
     }
 
     private EnrollmentRequest refreshTokens(EnrollmentRequest enrollmentRequest) {

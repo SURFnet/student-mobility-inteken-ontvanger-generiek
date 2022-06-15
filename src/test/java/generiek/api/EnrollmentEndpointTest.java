@@ -160,6 +160,10 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
         String correlationId = doToken(state);
         doStart(correlationId, PersonAuthentication.HEADER.name());
 
+
+        stubFor(post(urlPathMatching("/api/results-uri")).willReturn(aResponse()
+                .withHeader("Content-Type", "application/json")
+                .withBody(objectMapper.writeValueAsString(Collections.singletonMap("resultsURI", "http://localhost:8081/results")))));
         stubFor(post(urlPathMatching("/oidc/token")).willReturn(aResponse()
                 .withStatus(500)));
 
