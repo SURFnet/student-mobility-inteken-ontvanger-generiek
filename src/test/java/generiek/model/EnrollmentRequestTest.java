@@ -5,6 +5,7 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.util.HashSet;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -24,6 +25,7 @@ class EnrollmentRequestTest {
         enrollmentRequest.setPersonAuth(PersonAuthentication.HEADER.name());
         enrollmentRequest.setPersonURI("https://results.uu.university.com" + randomString);
         enrollmentRequest.setScope("https://long.scope.uri.at.somewhere" + randomString);
+        enrollmentRequest.setAssociations(new HashSet<>());
 
         enrollmentRequest = new EnrollmentRequest(enrollmentRequest);
 

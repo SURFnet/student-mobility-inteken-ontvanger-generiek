@@ -13,7 +13,6 @@ import java.time.Instant;
 @Entity(name = "associations")
 @NoArgsConstructor
 @Getter
-@Setter
 @ToString(exclude = {"enrollmentRequest"})
 public class Association implements Serializable {
 

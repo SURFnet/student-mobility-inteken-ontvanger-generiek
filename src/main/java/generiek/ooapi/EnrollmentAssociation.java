@@ -3,13 +3,13 @@ package generiek.ooapi;
 import java.util.Map;
 
 /**
- * Responsible for the transformation of the results reported back from the SIS to the OOAPI format.
+ * Responsible for the transformation of the association reported back from the SIS to the OOAPI format.
  */
-public class EnrollmentResult {
+public class EnrollmentAssociation {
 
     private final Map<String, Object> results;
 
-    public EnrollmentResult(Map<String, Object> results) {
+    public EnrollmentAssociation(Map<String, Object> results) {
         this.results = results;
     }
 
