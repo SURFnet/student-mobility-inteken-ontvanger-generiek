@@ -609,6 +609,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                 .statusCode(200);
     }
 
+    //TODO - two cases, update with existing association ID and new association
     private void doPlayReportBackResults(String correlationId) throws IOException {
         stubFor(post(urlPathMatching("/api/associations-uri")).willReturn(aResponse()
                 .withHeader("Content-Type", "application/json")

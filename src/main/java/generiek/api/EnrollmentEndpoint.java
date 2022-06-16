@@ -263,15 +263,22 @@ public class EnrollmentEndpoint {
      * Called by the Broker on behalf of the test user
      */
     @PostMapping("/api/play-results")
-    public ResponseEntity<Map<String, Object>> playResults(@RequestHeader("X-Correlation-ID") String correlationId, @RequestBody Map<String, Object> results) {
+    public ResponseEntity<Map<String, Object>> playResults(@RequestHeader("X-Correlation-ID") String correlationId,
+                                                           @RequestBody Map<String, Object> results) {
         if (!allowPlayground) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         EnrollmentRequest enrollmentRequest = enrollmentRepository.findByIdentifier(correlationId).orElseThrow(ExpiredEnrollmentRequestException::new);
         Map<String, Object> newResults = new HashMap<>(results);
         newResults.put("personId", enrollmentRequest.getEduid());
-        Association association = associationRepository.save(new Association(UUID.randomUUID().toString(), enrollmentRequest));
-        return this.associationUpdate(association.getAssociationId(), newResults);
+        Association association;
+        if (results.containsKey("associationId")) {
+            association = associationRepository.findByAssociationId((String) results.get("associationId"))
+                    .orElseThrow(ExpiredEnrollmentRequestException::new);
+            return this.associationUpdate(association.getAssociationId(), newResults);
+        } else {
+            return this.associate(enrollmentRequest.getEduid(), results);
+        }
     }
 
     /*
@@ -279,7 +286,7 @@ public class EnrollmentEndpoint {
      * enrollment
      */
     @PostMapping("/associations/external/{personId}")
-    public ResponseEntity associate(@PathVariable("personId") String personId,
+    public ResponseEntity<Map<String, Object>>  associate(@PathVariable("personId") String personId,
                                     @RequestBody Map<String, Object> association) {
         EnrollmentRequest enrollmentRequest = getEnrollmentRequest(personId);
 
