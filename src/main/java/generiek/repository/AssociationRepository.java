@@ -13,5 +13,5 @@ import java.util.Optional;
 @Repository
 public interface AssociationRepository extends CrudRepository<Association, Long> {
 
-    Optional<Association> findByAssociationId(String value);
+    Optional<Association> findByAssociationId(String associationId);
 }

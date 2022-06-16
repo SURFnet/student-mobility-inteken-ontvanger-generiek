@@ -14,8 +14,7 @@ import java.time.Instant;
 @NoArgsConstructor
 @Getter
 @Setter
-@ToString
-
+@ToString(exclude = {"enrollmentRequest"})
 public class Association implements Serializable {
 
     @Id

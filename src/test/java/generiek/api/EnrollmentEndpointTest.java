@@ -113,6 +113,9 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
         doAssociate(correlationId);
         Association association = associationRepository.findByAssociationId("1234567890").get();
         assertEquals(correlationId, association.getEnrollmentRequest().getIdentifier());
+
+        doPatchAssociate(association.getAssociationId());
+
     }
 
     @Test
@@ -498,6 +501,29 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                 .statusCode(200);
     }
 
+    private void doPatchAssociate(String associationId) throws IOException {
+        stubFor(post(urlPathMatching("/api/associations-uri")).willReturn(aResponse()
+                .withHeader("Content-Type", "application/json")
+                .withBody(objectMapper.writeValueAsString(Collections.singletonMap("associationsURI", "http://localhost:8081/associations")))));
+
+        String content = readFile("data/association_me.json");
+
+        stubFor(patch(urlPathMatching("/associations")).willReturn(aResponse()
+                .withBody(content)
+                .withHeader("Content-Type", "application/json")
+                .withStatus(200)));
+
+        given()
+                .when()
+                .contentType(ContentType.JSON)
+                .accept(ContentType.JSON)
+                .auth().basic("sis", "secret")
+                .body(new HashMap<>())
+                .pathParam("associationId", associationId)
+                .patch("/associations/{associationId}")
+                .then()
+                .statusCode(200);
+    }
 
     private void doPlayReportBackResults(String correlationId) throws IOException {
         Map<String, String> tokenResult = Collections.singletonMap("access_token", UUID.randomUUID().toString());

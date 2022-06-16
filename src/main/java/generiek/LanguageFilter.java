@@ -2,6 +2,7 @@ package generiek;
 
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -19,7 +20,8 @@ public class LanguageFilter implements Filter {
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
-        language.set(((HttpServletRequest) request).getHeader("Accept-Language"));
+        String languageHeader = ((HttpServletRequest) request).getHeader("Accept-Language");
+        language.set(StringUtils.hasText(languageHeader) ? languageHeader : "en-GB");
         chain.doFilter(request, response);
     }
 }

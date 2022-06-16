@@ -4,10 +4,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jwt.JWTClaimsSet;
+import org.springframework.http.client.OkHttp3ClientHttpRequestFactory;
+import okhttp3.OkHttpClient;
+
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import generiek.LanguageFilter;
 import generiek.ServiceRegistry;
+import generiek.exception.ExpiredEnrollmentRequestException;
 import generiek.jwt.JWTValidator;
 import generiek.model.Association;
 import generiek.model.EnrollmentRequest;
@@ -15,7 +19,6 @@ import generiek.model.PersonAuthentication;
 import generiek.ooapi.EnrollmentResult;
 import generiek.repository.AssociationRepository;
 import generiek.repository.EnrollmentRepository;
-import generiek.repository.ExpiredEnrollmentRequestException;
 import lombok.SneakyThrows;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -43,6 +46,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -109,7 +113,11 @@ public class EnrollmentEndpoint {
             request.getHeaders().add("Accept-Language", LanguageFilter.language.get());
             return execution.execute(request, body);
         }));
-
+        // Otherwise, we can't use method PATCH
+        OkHttpClient.Builder builder = new OkHttpClient.Builder();
+        builder.connectTimeout(5, TimeUnit.MINUTES);
+        builder.retryOnConnectionFailure(true);
+        restTemplate.setRequestFactory(new OkHttp3ClientHttpRequestFactory(builder.build()));
     }
 
     @InitBinder
@@ -293,6 +301,29 @@ public class EnrollmentEndpoint {
         String associationId = (String) responseEntity.getBody().get("associationId");
         associationRepository.save(new Association(associationId, enrollmentRequest));
         return responseEntity;
+    }
+
+    /*
+     * Called by the SIS of the guest institution to inform the home institution of the status of the (pending)
+     * enrollment
+     */
+    @PatchMapping("/associations/{associationId}")
+    public ResponseEntity associationUpdate(@PathVariable("associationId") String associationId,
+                                            @RequestBody Map<String, Object> association) {
+        EnrollmentRequest enrollmentRequest = associationRepository.findByAssociationId(associationId).orElseThrow(ExpiredEnrollmentRequestException::new).getEnrollmentRequest();
+
+        LOG.debug(String.format("Association uopdate endpoint called by SIS for enrolment request %s", enrollmentRequest));
+
+        String associationPatchURI;
+        try {
+            associationPatchURI = serviceRegistry.associationsURI(enrollmentRequest);
+        } catch (HttpStatusCodeException e) {
+            return this.errorResponseEntity("Error in obtaining associationURI for enrolment request:" + enrollmentRequest, e);
+        }
+        //Now call proxy the call using the accessToken
+        LOG.debug(String.format("Patching association endpoint for enrolment request %s to %s", enrollmentRequest, associationPatchURI));
+
+        return exchangeToHomeInstitution(enrollmentRequest, association, associationPatchURI, HttpMethod.PATCH, true);
     }
 
 
