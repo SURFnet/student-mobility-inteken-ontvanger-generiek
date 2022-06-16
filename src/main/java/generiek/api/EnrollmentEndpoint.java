@@ -327,6 +327,30 @@ public class EnrollmentEndpoint {
         return exchangeToHomeInstitution(enrollmentRequest, body, associationURI, HttpMethod.PATCH, true);
     }
 
+    /*
+     * Called by the SIS of the guest institution to validate the status of a guest-user
+     */
+    @GetMapping("/person/{personId}")
+    public ResponseEntity<Map<String, Object>> person(@PathVariable("personId") String personId) {
+        EnrollmentRequest enrollmentRequest = getEnrollmentRequest(personId);
+
+        LOG.debug(String.format("Person endpoint called by SIS for enrolment request %s", enrollmentRequest));
+
+        String personURI;
+        try {
+            personURI = serviceRegistry.personsURI(enrollmentRequest);
+        } catch (HttpStatusCodeException e) {
+            return this.errorResponseEntity("Error in obtaining personURI for enrolment request:" + enrollmentRequest, e);
+        }
+        LOG.debug(String.format("Getting person endpoint for enrolment request %s to %s", enrollmentRequest, personURI));
+
+        ResponseEntity<Map<String, Object>> responseEntity = exchangeToHomeInstitution(enrollmentRequest, null, personURI, HttpMethod.GET, true);
+        if (responseEntity.getStatusCode().is2xxSuccessful()) {
+            responseEntity.getBody().put("personId", enrollmentRequest.getEduid());
+        }
+        return responseEntity;
+    }
+
     private EnrollmentRequest getEnrollmentRequest(String personId) {
         List<EnrollmentRequest> enrollmentRequests = enrollmentRepository.findByEduidOrderByCreatedDesc(personId);
         if (CollectionUtils.isEmpty(enrollmentRequests)) {

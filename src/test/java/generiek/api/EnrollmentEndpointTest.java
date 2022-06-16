@@ -290,7 +290,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
 
         stubFor(post(urlPathMatching("/api/associations-uri")).willReturn(aResponse()
                 .withHeader("Content-Type", "application/json")
-                .withBody(objectMapper.writeValueAsString(Collections.singletonMap("resultsURI", "http://localhost:8081/associations")))));
+                .withBody(objectMapper.writeValueAsString(Collections.singletonMap("associationsURI", "http://localhost:8081/associations")))));
 
 
         stubFor(post(urlPathMatching("/associations/external/me")).willReturn(aResponse()
@@ -307,6 +307,77 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                 .post("/associations/external/{personId}")
                 .then()
                 .statusCode(500);
+    }
+
+    @Test
+    void person() throws Exception {
+        String state = doAuthorize(PersonAuthentication.HEADER.name());
+        String correlationId = doToken(state);
+        EnrollmentRequest enrollmentRequest = enrollmentRepository.findByIdentifier(correlationId).get();
+
+        stubFor(post(urlPathMatching("/api/persons-uri")).willReturn(aResponse()
+                .withHeader("Content-Type", "application/json")
+                .withBody(objectMapper.writeValueAsString(Collections.singletonMap("personsURI", "http://localhost:8081/person/me")))));
+
+        stubFor(get(urlPathMatching("/person/me")).willReturn(aResponse()
+                .withHeader("Content-Type", "application/json")
+                .withStatus(200)
+                .withBody("{}")));
+
+        Map results = given()
+                .when()
+                .contentType(ContentType.JSON)
+                .accept(ContentType.JSON)
+                .auth().basic("sis", "secret")
+                .pathParam("personId", enrollmentRequest.getEduid())
+                .get("/person/{personId}")
+                .as(Map.class);
+        assertEquals(enrollmentRequest.getEduid(), results.get("personId"));
+    }
+
+    @Test
+    void personInvalidURI() throws Exception {
+        String state = doAuthorize(PersonAuthentication.HEADER.name());
+        String correlationId = doToken(state);
+        EnrollmentRequest enrollmentRequest = enrollmentRepository.findByIdentifier(correlationId).get();
+
+        stubFor(post(urlPathMatching("/api/persons-uri")).willReturn(aResponse()
+                .withStatus(404)));
+
+        Map results = given()
+                .when()
+                .contentType(ContentType.JSON)
+                .accept(ContentType.JSON)
+                .auth().basic("sis", "secret")
+                .pathParam("personId", enrollmentRequest.getEduid())
+                .get("/person/{personId}")
+                .as(Map.class);
+        assertTrue((Boolean) results.get("error"));
+    }
+
+    @Test
+    void personInvalidAPiCall() throws Exception {
+        String state = doAuthorize(PersonAuthentication.HEADER.name());
+        String correlationId = doToken(state);
+        EnrollmentRequest enrollmentRequest = enrollmentRepository.findByIdentifier(correlationId).get();
+
+        stubFor(post(urlPathMatching("/api/persons-uri")).willReturn(aResponse()
+                .withHeader("Content-Type", "application/json")
+                .withBody(objectMapper.writeValueAsString(Collections.singletonMap("personsURI", "http://localhost:8081/person/me")))));
+
+        stubFor(get(urlPathMatching("/person/me")).willReturn(aResponse()
+                .withStatus(404)));
+
+        Map results = given()
+                .when()
+                .contentType(ContentType.JSON)
+                .accept(ContentType.JSON)
+                .auth().basic("sis", "secret")
+                .pathParam("personId", enrollmentRequest.getEduid())
+                .get("/person/{personId}")
+                .as(Map.class);
+        assertTrue((Boolean) results.get("error"));
+        assertNull(results.get("personId"));
     }
 
     @Test

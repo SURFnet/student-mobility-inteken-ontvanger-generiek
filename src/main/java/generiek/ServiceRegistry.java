@@ -38,6 +38,15 @@ public class ServiceRegistry {
         return results.get("associationsURI");
     }
 
+    @SuppressWarnings("unchecked")
+    public String personsURI(EnrollmentRequest enrollmentRequest) {
+        Map<String, String> results = restTemplate.postForEntity(
+                this.serviceRegistryBaseURL + "/api/persons-uri",
+                new HttpEntity<>(Collections.singletonMap("homeInstitution", enrollmentRequest.getHomeInstitution())),
+                Map.class).getBody();
+        return results.get("personsURI");
+    }
+
     public String getServiceRegistryBaseURL() {
         return serviceRegistryBaseURL;
     }
