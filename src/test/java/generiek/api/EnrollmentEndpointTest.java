@@ -10,6 +10,7 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import generiek.AbstractIntegrationTest;
 import generiek.WireMockExtension;
+import generiek.model.Association;
 import generiek.model.EnrollmentRequest;
 import generiek.model.PersonAuthentication;
 import io.restassured.http.ContentType;
@@ -102,6 +103,16 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
         String correlationId = doToken(state);
         doStart(correlationId, PersonAuthentication.FORM.name());
         doReportBackResults(correlationId);
+    }
+
+    @Test
+    void associateEnrollmentRequest() throws Exception {
+        String state = doAuthorize(PersonAuthentication.HEADER.name());
+        String correlationId = doToken(state);
+        doStart(correlationId, PersonAuthentication.HEADER.name());
+        doAssociate(correlationId);
+        Association association = associationRepository.findByAssociationId("1234567890").get();
+        assertEquals(correlationId, association.getEnrollmentRequest().getIdentifier());
     }
 
     @Test
@@ -461,7 +472,34 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                 .withBody(objectMapper.writeValueAsString(Collections.singletonMap("resultsURI", "http://localhost:8081/results")))));
     }
 
-    private void doPlayReportBackResults(String state) throws IOException {
+    private void doAssociate(String correlationId) throws IOException {
+        EnrollmentRequest enrollmentRequest = enrollmentRepository.findByIdentifier(correlationId).get();
+
+        stubFor(post(urlPathMatching("/api/associations-uri")).willReturn(aResponse()
+                .withHeader("Content-Type", "application/json")
+                .withBody(objectMapper.writeValueAsString(Collections.singletonMap("associationsURI", "http://localhost:8081/associations")))));
+
+        String content = readFile("data/association_me.json");
+
+        stubFor(post(urlPathMatching("/associations")).willReturn(aResponse()
+                        .withBody(content)
+                .withHeader("Content-Type", "application/json")
+                .withStatus(200)));
+
+        given()
+                .when()
+                .contentType(ContentType.JSON)
+                .accept(ContentType.JSON)
+                .auth().basic("sis", "secret")
+                .body(new HashMap<>())
+                .pathParam("personId", enrollmentRequest.getEduid())
+                .post("/associations/external/{personId}")
+                .then()
+                .statusCode(200);
+    }
+
+
+    private void doPlayReportBackResults(String correlationId) throws IOException {
         Map<String, String> tokenResult = Collections.singletonMap("access_token", UUID.randomUUID().toString());
 
         stubPostsForResults(tokenResult);
@@ -472,7 +510,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                 .when()
                 .contentType(ContentType.JSON)
                 .accept(ContentType.JSON)
-                .header("X-Correlation-ID", state)
+                .header("X-Correlation-ID", correlationId)
                 .auth().basic("sis", "secret")
                 .body(results)
                 .post("/api/play-results")

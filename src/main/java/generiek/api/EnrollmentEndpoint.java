@@ -237,7 +237,6 @@ public class EnrollmentEndpoint {
         try {
             personMap = person(enrollmentRequest);
         } catch (HttpStatusCodeException e) {
-            LOG.error("Error in retrieving person for enrollmentRequest: " + enrollmentRequest, e);
             return this.errorResponseEntity("Error in retrieving person for enrollmentRequest: " + enrollmentRequest, e);
         }
         LOG.debug(String.format("Replacing personId %s with eduID %s", personMap.get("personId"), enrollmentRequest.getEduid()));
@@ -252,7 +251,6 @@ public class EnrollmentEndpoint {
         try {
             return restTemplate.exchange(backendUrl, HttpMethod.POST, httpEntity, mapRef);
         } catch (HttpStatusCodeException e) {
-            LOG.error("Error in registration results for enrollmentRequest: " + enrollmentRequest, e);
             return this.errorResponseEntity("Error in registration results for enrollmentRequest: " + enrollmentRequest, e);
         }
     }
@@ -286,9 +284,7 @@ public class EnrollmentEndpoint {
         try {
             associationURI = serviceRegistry.associationsURI(enrollmentRequest);
         } catch (HttpStatusCodeException e) {
-            LOG.error("Error in obtaining associationURI for enrolment request:" + enrollmentRequest, e);
-            return this.errorResponseEntity(
-                    "Error in obtaining associationURI for enrolment request:" + enrollmentRequest, e);
+            return this.errorResponseEntity("Error in obtaining associationURI for enrolment request:" + enrollmentRequest, e);
         }
         //Now call the actual OOAPI endpoint with the new accessToken
         LOG.debug(String.format("Posting association endpoint for personId %s and enrolment request %s to %s", personId, enrollmentRequest, associationURI));
@@ -316,9 +312,7 @@ public class EnrollmentEndpoint {
         try {
             resultsURI = serviceRegistry.resultsURI(enrollmentRequest);
         } catch (HttpStatusCodeException e) {
-            LOG.error("Error in obtaining resultsURI for enrolment request:" + enrollmentRequest, e);
-            return this.errorResponseEntity(
-                    "Error in obtaining resultsURI for enrolment request:" + enrollmentRequest, e);
+            return this.errorResponseEntity("Error in obtaining resultsURI for enrolment request:" + enrollmentRequest, e);
         }
         //Now call the actual OOAPI endpoint with the new accessToken
         LOG.debug(String.format("Posting back results endpoint for personId %s and enrolment request %s to %s", personId, enrollmentRequest, resultsURI));
@@ -357,9 +351,7 @@ public class EnrollmentEndpoint {
                     EnrollmentRequest refreshedEnrollmentRequest = refreshTokens(enrollmentRequest);
                     return exchangeToHomeInstitution(refreshedEnrollmentRequest, body, uri, httpMethod, false);
                 } catch (HttpStatusCodeException e2) {
-                    LOG.error("Error in obtaining new accessToken with saved refreshToken for enrolment request:" + enrollmentRequest, e2);
-                    return this.errorResponseEntity(
-                            "Error in obtaining new accessToken with saved refreshToken for enrolment request:" + enrollmentRequest, e2);
+                    return this.errorResponseEntity("Error in obtaining new accessToken with saved refreshToken for enrolment request:" + enrollmentRequest, e2);
                 }
             } else {
                 LOG.error(String.format("Error %s from the OOAPI endpoint for enrolment request: %s. Message: %s", e.getStatusCode(), enrollmentRequest, e.getMessage()));

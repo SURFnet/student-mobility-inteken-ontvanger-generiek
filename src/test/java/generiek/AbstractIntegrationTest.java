@@ -1,5 +1,6 @@
 package generiek;
 
+import generiek.repository.AssociationRepository;
 import generiek.repository.EnrollmentRepository;
 import io.restassured.RestAssured;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,10 +27,14 @@ public abstract class AbstractIntegrationTest {
     @Autowired
     protected EnrollmentRepository enrollmentRepository;
 
+    @Autowired
+    protected AssociationRepository associationRepository;
+
     @BeforeEach
     public void before() {
         RestAssured.port = port;
         enrollmentRepository.deleteAll();
+        associationRepository.deleteAll();
     }
 
 }
