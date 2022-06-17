@@ -65,7 +65,7 @@ public class SecurityConfiguration {
         @Override
         protected void configure(HttpSecurity http) throws Exception {
             http.requestMatchers()
-                    .antMatchers("/api/play-results", "/associations/**")
+                    .antMatchers("/api/results", "/api/start", "/api/play-results", "api/me", "/associations/**", "/person/**")
                     .and()
                     .csrf()
                     .disable()

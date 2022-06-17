@@ -17,7 +17,7 @@ import static io.restassured.RestAssured.given;
 public class EnrollmentEndpointProductionTest extends AbstractIntegrationTest {
 
     @Test
-    void playGroundNotAllowed() throws Exception {
+    void playResultsNotAllowed() {
         given()
                 .when()
                 .contentType(ContentType.JSON)
@@ -26,6 +26,19 @@ public class EnrollmentEndpointProductionTest extends AbstractIntegrationTest {
                 .auth().basic("sis", "secret")
                 .body(Collections.singletonMap("nope", "nope"))
                 .post("/api/play-results")
+                .then()
+                .statusCode(403);
+    }
+
+    @Test
+    void apiMeNotAllowed() {
+        given()
+                .when()
+                .contentType(ContentType.JSON)
+                .accept(ContentType.JSON)
+                .header("X-Correlation-ID", "state")
+                .auth().basic("sis", "secret")
+                .get("/api/me")
                 .then()
                 .statusCode(403);
     }

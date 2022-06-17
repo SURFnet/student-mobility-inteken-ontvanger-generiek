@@ -301,7 +301,6 @@ public class EnrollmentEndpoint {
         } catch (HttpStatusCodeException e) {
             return this.errorResponseEntity("Error in obtaining associationURI for enrolment request:" + enrollmentRequest, e);
         }
-        //Now call the actual OOAPI endpoint with the new accessToken
         LOG.debug(String.format("Posting association endpoint for personId %s and enrolment request %s to %s", personId, enrollmentRequest, associationURI));
 
         ResponseEntity<Map<String, Object>> responseEntity = exchangeToHomeInstitution(enrollmentRequest, association, associationURI, HttpMethod.POST, true);
@@ -331,8 +330,8 @@ public class EnrollmentEndpoint {
             return this.errorResponseEntity("Error in obtaining associationURI for enrolment request:" + enrollmentRequest, e);
         }
         LOG.debug(String.format("Patching association endpoint for enrolment request %s to %s", enrollmentRequest, associationURI));
-        Map<String, Object> body = new EnrollmentAssociation(association).transform();
 
+        Map<String, Object> body = EnrollmentAssociation.transform(association, enrollmentRequest);
         return exchangeToHomeInstitution(enrollmentRequest, body, associationURI, HttpMethod.PATCH, true);
     }
 
@@ -354,9 +353,20 @@ public class EnrollmentEndpoint {
             return this.errorResponseEntity("Error in obtaining resultsURI for enrolment request:" + enrollmentRequest, e);
         }
         LOG.debug(String.format("Posting back results endpoint for personId %s and enrolment request %s to %s", personId, enrollmentRequest, resultsURI));
-        Map<String, Object> body = new EnrollmentAssociation(results).transform();
 
+        Map<String, Object> body = EnrollmentAssociation.transform(results, enrollmentRequest);
         return exchangeToHomeInstitution(enrollmentRequest, body, resultsURI, HttpMethod.POST, true);
+    }
+    /*
+     * Called by the playground
+     */
+    @GetMapping("/api/me")
+    public ResponseEntity<Map<String, Object>> me(@RequestHeader("X-Correlation-ID") String correlationId) {
+        if (!allowPlayground) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        EnrollmentRequest enrollmentRequest = enrollmentRepository.findByIdentifier(correlationId).orElseThrow(ExpiredEnrollmentRequestException::new);
+        return person(enrollmentRequest.getEduid());
     }
 
     /*

@@ -433,6 +433,32 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void me() throws Exception {
+        String state = doAuthorize(PersonAuthentication.HEADER.name());
+        String correlationId = doToken(state);
+        EnrollmentRequest enrollmentRequest = enrollmentRepository.findByIdentifier(correlationId).get();
+
+        stubFor(post(urlPathMatching("/api/persons-uri")).willReturn(aResponse()
+                .withHeader("Content-Type", "application/json")
+                .withBody(objectMapper.writeValueAsString(Collections.singletonMap("personsURI", "http://localhost:8081/person/me")))));
+
+        stubFor(get(urlPathMatching("/person/me")).willReturn(aResponse()
+                .withHeader("Content-Type", "application/json")
+                .withStatus(200)
+                .withBody("{}")));
+
+        Map results = given()
+                .when()
+                .contentType(ContentType.JSON)
+                .accept(ContentType.JSON)
+                .auth().basic("sis", "secret")
+                .header("X-Correlation-ID", correlationId)
+                .get("/api/me")
+                .as(Map.class);
+        assertEquals(enrollmentRequest.getEduid(), results.get("personId"));
+    }
+
+    @Test
     void invalidEnrollmentRequest() throws Exception {
         doAuthorize(PersonAuthentication.HEADER.name());
 

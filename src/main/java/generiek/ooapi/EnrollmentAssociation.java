@@ -1,5 +1,7 @@
 package generiek.ooapi;
 
+import generiek.model.EnrollmentRequest;
+
 import java.util.Map;
 
 /**
@@ -7,16 +9,13 @@ import java.util.Map;
  */
 public class EnrollmentAssociation {
 
-    private final Map<String, Object> results;
-
-    public EnrollmentAssociation(Map<String, Object> results) {
-        this.results = results;
+    private EnrollmentAssociation() {
     }
 
-    public Map<String, Object> transform() {
+    public static Map<String, Object> transform(Map<String, Object> results, EnrollmentRequest enrollmentRequest) {
         //For now assume we can leave everything as is, but this is not very feasible for the actual implementation
-        this.results.remove("personId");
-        return this.results;
+        results.put("personId", enrollmentRequest.getEduid());
+        return results;
     }
 
 }
