@@ -41,7 +41,10 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.text.ParseException;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -286,8 +289,8 @@ public class EnrollmentEndpoint {
      * enrollment
      */
     @PostMapping("/associations/external/{personId}")
-    public ResponseEntity<Map<String, Object>>  associate(@PathVariable("personId") String personId,
-                                    @RequestBody Map<String, Object> association) {
+    public ResponseEntity<Map<String, Object>> associate(@PathVariable("personId") String personId,
+                                                         @RequestBody Map<String, Object> association) {
         EnrollmentRequest enrollmentRequest = getEnrollmentRequest(personId);
 
         LOG.debug(String.format("Associate endpoint called by SIS personId %s for enrolment request %s", personId, enrollmentRequest));
@@ -327,11 +330,33 @@ public class EnrollmentEndpoint {
         } catch (HttpStatusCodeException e) {
             return this.errorResponseEntity("Error in obtaining associationURI for enrolment request:" + enrollmentRequest, e);
         }
-        //Now call proxy the call using the accessToken
         LOG.debug(String.format("Patching association endpoint for enrolment request %s to %s", enrollmentRequest, associationURI));
         Map<String, Object> body = new EnrollmentAssociation(association).transform();
 
         return exchangeToHomeInstitution(enrollmentRequest, body, associationURI, HttpMethod.PATCH, true);
+    }
+
+    /*
+     * Called by the SIS of the guest institution to report back results that need to be sent with oauth secured
+     * to the home institution. V4 version for backward compatibility.
+     */
+    @PostMapping("/api/results")
+    public ResponseEntity results(@RequestBody Map<String, Object> results) {
+        String personId = (String) results.get("personId");
+        EnrollmentRequest enrollmentRequest = getEnrollmentRequest(personId);
+
+        LOG.debug(String.format("Report back results endpoint called by SIS personId %s and enrolment request %s", personId, enrollmentRequest));
+
+        String resultsURI;
+        try {
+            resultsURI = serviceRegistry.associationsURI(enrollmentRequest) + "/me";
+        } catch (HttpStatusCodeException e) {
+            return this.errorResponseEntity("Error in obtaining resultsURI for enrolment request:" + enrollmentRequest, e);
+        }
+        LOG.debug(String.format("Posting back results endpoint for personId %s and enrolment request %s to %s", personId, enrollmentRequest, resultsURI));
+        Map<String, Object> body = new EnrollmentAssociation(results).transform();
+
+        return exchangeToHomeInstitution(enrollmentRequest, body, resultsURI, HttpMethod.POST, true);
     }
 
     /*

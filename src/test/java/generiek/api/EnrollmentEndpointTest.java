@@ -315,6 +315,53 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void resultsV4() throws Exception {
+        String state = doAuthorize(PersonAuthentication.HEADER.name());
+        String correlationId = doToken(state);
+        EnrollmentRequest enrollmentRequest = enrollmentRepository.findByIdentifier(correlationId).get();
+
+        stubFor(post(urlPathMatching("/api/associations-uri")).willReturn(aResponse()
+                .withHeader("Content-Type", "application/json")
+                .withBody(objectMapper.writeValueAsString(Collections.singletonMap("associationsURI", "http://localhost:8081/associations")))));
+
+        stubFor(post(urlPathMatching("/associations/me")).willReturn(aResponse()
+                .withHeader("Content-Type", "application/json")
+                .withStatus(200)
+                .withBody("{}")));
+
+        given()
+                .when()
+                .contentType(ContentType.JSON)
+                .accept(ContentType.JSON)
+                .auth().basic("sis", "secret")
+                .body(Collections.singletonMap("personId", enrollmentRequest.getEduid()))
+                .post("/api/results")
+                .then()
+                .statusCode(200);
+    }
+
+    @Test
+    void resultsV4ServiceRegistryException() throws NoSuchAlgorithmException, IOException, NoSuchProviderException, JOSEException {
+        String state = doAuthorize(PersonAuthentication.HEADER.name());
+        String correlationId = doToken(state);
+        EnrollmentRequest enrollmentRequest = enrollmentRepository.findByIdentifier(correlationId).get();
+
+        stubFor(post(urlPathMatching("/api/associations-uri")).willReturn(aResponse()
+                .withHeader("Content-Type", "application/json")
+                .withStatus(403)));
+
+        Map map = given()
+                .when()
+                .contentType(ContentType.JSON)
+                .accept(ContentType.JSON)
+                .auth().basic("sis", "secret")
+                .body(Collections.singletonMap("personId", enrollmentRequest.getEduid()))
+                .post("/api/results")
+                .as(Map.class);
+        assertTrue((Boolean) map.get("error"));
+    }
+
+    @Test
     void person() throws Exception {
         String state = doAuthorize(PersonAuthentication.HEADER.name());
         String correlationId = doToken(state);
@@ -657,7 +704,6 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                 .as(Map.class);
 
         assertEquals(associationId, map.get("associationId"));
-
     }
 
     private String readFile(String path) throws IOException {
