@@ -1,6 +1,7 @@
 package generiek.api;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.RSASSASigner;
@@ -21,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -49,6 +51,9 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
     static {
         Security.addProvider(bcProvider);
     }
+
+    private final TypeReference<Map<String, Object>> mapRef = new TypeReference<Map<String, Object>>() {
+    };
 
     @Autowired
     protected ObjectMapper objectMapper;
@@ -609,19 +614,21 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                 .statusCode(200);
     }
 
-    //TODO - two cases, update with existing association ID and new association
     private void doPlayReportBackResults(String correlationId) throws IOException {
         stubFor(post(urlPathMatching("/api/associations-uri")).willReturn(aResponse()
                 .withHeader("Content-Type", "application/json")
                 .withBody(objectMapper.writeValueAsString(Collections.singletonMap("associationsURI", "http://localhost:8081/associations")))));
 
-        stubFor(patch(urlPathMatching("/associations/(.*)")).willReturn(aResponse()
+        //Because we are not sending an associationId, it will create one
+        String associationId = UUID.randomUUID().toString();
+        String bodyFromHomeInstitution = objectMapper.writeValueAsString(Collections.singletonMap("associationId", associationId));
+        stubFor(post(urlPathMatching("/associations/external/me")).willReturn(aResponse()
                 .withHeader("Content-Type", "application/json")
-                .withBody("{}")));
+                .withBody(bodyFromHomeInstitution)));
 
-        Map<String, Object> results = objectMapper.readValue(readFile("data/results.json"), Map.class);
+        Map<String, Object> results = objectMapper.readValue(readFile("data/results.json"), mapRef);
 
-        given()
+        Map map = given()
                 .when()
                 .contentType(ContentType.JSON)
                 .accept(ContentType.JSON)
@@ -629,8 +636,28 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                 .auth().basic("sis", "secret")
                 .body(results)
                 .post("/api/play-results")
-                .then()
-                .statusCode(200);
+                .as(Map.class);
+        assertEquals(associationId, map.get("associationId"));
+
+        stubFor(patch(urlPathMatching("/associations/(.*)")).willReturn(aResponse()
+                .withHeader("Content-Type", "application/json")
+                .withBody(bodyFromHomeInstitution)));
+
+        //The return map contains the associationId, and therefore it will update the association
+        results.putAll(map);
+
+        map = given()
+                .when()
+                .contentType(ContentType.JSON)
+                .accept(ContentType.JSON)
+                .header("X-Correlation-ID", correlationId)
+                .auth().basic("sis", "secret")
+                .body(results)
+                .post("/api/play-results")
+                .as(Map.class);
+
+        assertEquals(associationId, map.get("associationId"));
+
     }
 
     private String readFile(String path) throws IOException {
