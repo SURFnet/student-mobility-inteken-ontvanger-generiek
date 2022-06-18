@@ -101,9 +101,8 @@ public class EnrollmentRequest implements Serializable {
         byte[] decoded = Base64.getDecoder().decode(URLDecoder.decode(base64, Charset.defaultCharset().name()));
         ByteArrayInputStream bis = new ByteArrayInputStream(decoded);
         GZIPInputStream gin = new GZIPInputStream(bis);
-        String json = IOUtils.readInputStreamToString(gin);
 
-        Map<String, String> map = objectMapper.readValue(json, Map.class);
+        Map<String, String> map = objectMapper.readValue(gin, Map.class);
 
         EnrollmentRequest enrollmentRequest = new EnrollmentRequest();
         enrollmentRequest.setPersonAuth(map.get("a"));
