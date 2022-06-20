@@ -279,6 +279,8 @@ public class EnrollmentEndpoint {
             association = associationRepository.findByAssociationId((String) results.get("associationId"))
                     .orElseThrow(ExpiredEnrollmentRequestException::new);
             return this.associationUpdate(association.getAssociationId(), newResults);
+        } else if (results.containsKey("v4")){
+            return this.results(newResults);
         } else {
             return this.associate(enrollmentRequest.getEduid(), results);
         }
@@ -340,7 +342,7 @@ public class EnrollmentEndpoint {
      * to the home institution. V4 version for backward compatibility.
      */
     @PostMapping("/api/results")
-    public ResponseEntity results(@RequestBody Map<String, Object> results) {
+    public ResponseEntity<Map<String, Object>>  results(@RequestBody Map<String, Object> results) {
         String personId = (String) results.get("personId");
         EnrollmentRequest enrollmentRequest = getEnrollmentRequest(personId);
 

@@ -39,6 +39,7 @@ import java.util.*;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static io.restassured.RestAssured.given;
+import static java.util.Collections.singletonMap;
 import static org.apache.http.HttpStatus.SC_MOVED_TEMPORARILY;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.*;
@@ -75,7 +76,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                 .accept(ContentType.JSON)
                 .auth().basic("user", "secret")
                 .header("X-Correlation-ID", "nope")
-                .body(Collections.singletonMap("N/", "A"))
+                .body(singletonMap("N/", "A"))
                 .post("/api/start")
                 .then()
                 .body("status", equalTo(409));
@@ -88,7 +89,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                 .contentType(ContentType.JSON)
                 .accept(ContentType.JSON)
                 .auth().basic("sis", "secret")
-                .body(Collections.singletonMap("N/", "A"))
+                .body(singletonMap("N/", "A"))
                 .post("/associations/external/nope")
                 .then()
                 .body("status", equalTo(409));
@@ -128,10 +129,41 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void fullScenarioWithPlayVersion4() throws Exception {
+        String state = doAuthorize(PersonAuthentication.HEADER.name());
+        String correlationId = doToken(state);
+        doStart(correlationId, PersonAuthentication.HEADER.name());
+
+        stubFor(post(urlPathMatching("/api/associations-uri")).willReturn(aResponse()
+                .withHeader("Content-Type", "application/json")
+                .withBody(objectMapper.writeValueAsString(singletonMap("associationsURI", "http://localhost:8081/associations")))));
+
+        //Because we are not sending an associationId, it will create one
+        stubFor(post(urlPathMatching("/associations/me")).willReturn(aResponse()
+                .withHeader("Content-Type", "application/json")
+                .withBody(objectMapper.writeValueAsString(singletonMap("res", "ok")))));
+
+        Map<String, Object> results = objectMapper.readValue(readFile("data/results.json"), mapRef);
+        results.put("v4", true);
+
+        Map map = given()
+                .when()
+                .contentType(ContentType.JSON)
+                .accept(ContentType.JSON)
+                .header("X-Correlation-ID", correlationId)
+                .auth().basic("sis", "secret")
+                .body(results)
+                .post("/api/play-results")
+                .as(Map.class);
+        assertEquals("ok", map.get("res"));
+
+    }
+
+    @Test
     void invalidServiceRegistryEndpoint() throws JsonProcessingException {
         stubFor(post(urlPathMatching("/api/validate-service-registry-endpoints")).willReturn(aResponse()
                 .withHeader("Content-Type", "application/json")
-                .withBody(objectMapper.writeValueAsString(Collections.singletonMap("valid", false)))));
+                .withBody(objectMapper.writeValueAsString(singletonMap("valid", false)))));
 
         String location = given().redirects().follow(false)
                 .when()
@@ -177,7 +209,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
 
         stubFor(post(urlPathMatching("/api/associations-uri")).willReturn(aResponse()
                 .withHeader("Content-Type", "application/json")
-                .withBody(objectMapper.writeValueAsString(Collections.singletonMap("associationsURI", "http://localhost:8081/associations")))));
+                .withBody(objectMapper.writeValueAsString(singletonMap("associationsURI", "http://localhost:8081/associations")))));
         stubFor(post(urlPathMatching("/oidc/token")).willReturn(aResponse()
                 .withStatus(500)));
         //Ensure this goes wrong otherwise no new tokens are fetched
@@ -208,7 +240,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
 
         stubFor(post(urlPathMatching("/api/associations-uri")).willReturn(aResponse()
                 .withHeader("Content-Type", "application/json")
-                .withBody(objectMapper.writeValueAsString(Collections.singletonMap("associationsURI", "http://localhost:8081/associations")))));
+                .withBody(objectMapper.writeValueAsString(singletonMap("associationsURI", "http://localhost:8081/associations")))));
 
         Map<String, String> tokenResult = new HashMap<>();
         tokenResult.put("access_token", "123456");
@@ -295,7 +327,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
 
         stubFor(post(urlPathMatching("/api/associations-uri")).willReturn(aResponse()
                 .withHeader("Content-Type", "application/json")
-                .withBody(objectMapper.writeValueAsString(Collections.singletonMap("associationsURI", "http://localhost:8081/associations")))));
+                .withBody(objectMapper.writeValueAsString(singletonMap("associationsURI", "http://localhost:8081/associations")))));
 
 
         stubFor(post(urlPathMatching("/associations/external/me")).willReturn(aResponse()
@@ -322,7 +354,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
 
         stubFor(post(urlPathMatching("/api/associations-uri")).willReturn(aResponse()
                 .withHeader("Content-Type", "application/json")
-                .withBody(objectMapper.writeValueAsString(Collections.singletonMap("associationsURI", "http://localhost:8081/associations")))));
+                .withBody(objectMapper.writeValueAsString(singletonMap("associationsURI", "http://localhost:8081/associations")))));
 
         stubFor(post(urlPathMatching("/associations/me")).willReturn(aResponse()
                 .withHeader("Content-Type", "application/json")
@@ -334,7 +366,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                 .contentType(ContentType.JSON)
                 .accept(ContentType.JSON)
                 .auth().basic("sis", "secret")
-                .body(Collections.singletonMap("personId", enrollmentRequest.getEduid()))
+                .body(singletonMap("personId", enrollmentRequest.getEduid()))
                 .post("/api/results")
                 .then()
                 .statusCode(200);
@@ -355,7 +387,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                 .contentType(ContentType.JSON)
                 .accept(ContentType.JSON)
                 .auth().basic("sis", "secret")
-                .body(Collections.singletonMap("personId", enrollmentRequest.getEduid()))
+                .body(singletonMap("personId", enrollmentRequest.getEduid()))
                 .post("/api/results")
                 .as(Map.class);
         assertTrue((Boolean) map.get("error"));
@@ -369,7 +401,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
 
         stubFor(post(urlPathMatching("/api/persons-uri")).willReturn(aResponse()
                 .withHeader("Content-Type", "application/json")
-                .withBody(objectMapper.writeValueAsString(Collections.singletonMap("personsURI", "http://localhost:8081/person/me")))));
+                .withBody(objectMapper.writeValueAsString(singletonMap("personsURI", "http://localhost:8081/person/me")))));
 
         stubFor(get(urlPathMatching("/person/me")).willReturn(aResponse()
                 .withHeader("Content-Type", "application/json")
@@ -415,7 +447,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
 
         stubFor(post(urlPathMatching("/api/persons-uri")).willReturn(aResponse()
                 .withHeader("Content-Type", "application/json")
-                .withBody(objectMapper.writeValueAsString(Collections.singletonMap("personsURI", "http://localhost:8081/person/me")))));
+                .withBody(objectMapper.writeValueAsString(singletonMap("personsURI", "http://localhost:8081/person/me")))));
 
         stubFor(get(urlPathMatching("/person/me")).willReturn(aResponse()
                 .withStatus(404)));
@@ -440,7 +472,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
 
         stubFor(post(urlPathMatching("/api/persons-uri")).willReturn(aResponse()
                 .withHeader("Content-Type", "application/json")
-                .withBody(objectMapper.writeValueAsString(Collections.singletonMap("personsURI", "http://localhost:8081/person/me")))));
+                .withBody(objectMapper.writeValueAsString(singletonMap("personsURI", "http://localhost:8081/person/me")))));
 
         stubFor(get(urlPathMatching("/person/me")).willReturn(aResponse()
                 .withHeader("Content-Type", "application/json")
@@ -462,7 +494,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
     void invalidEnrollmentRequest() throws Exception {
         doAuthorize(PersonAuthentication.HEADER.name());
 
-        String accessToken = accessToken(Collections.singletonMap("eduid", "123456789"));
+        String accessToken = accessToken(singletonMap("eduid", "123456789"));
         Map<String, String> tokenResult = new HashMap<>();
         tokenResult.put("access_token", accessToken);
         tokenResult.put("refresh_token", accessToken);
@@ -550,7 +582,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
     private String doAuthorize(String personAuth) {
         stubFor(post(urlPathMatching("/api/validate-service-registry-endpoints")).willReturn(aResponse()
                 .withHeader("Content-Type", "application/json")
-                .withBody(objectMapper.writeValueAsString(Collections.singletonMap("valid", true)))));
+                .withBody(objectMapper.writeValueAsString(singletonMap("valid", true)))));
 
         String location = given().redirects().follow(false)
                 .when()
@@ -619,7 +651,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
 
         stubFor(post(urlPathMatching("/intake")).willReturn(aResponse()
                 .withHeader("Content-Type", "application/json")
-                .withBody(objectMapper.writeValueAsString(Collections.singletonMap("result", "ok")))));
+                .withBody(objectMapper.writeValueAsString(singletonMap("result", "ok")))));
 
         Map result = given()
                 .when()
@@ -638,7 +670,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
 
         stubFor(post(urlPathMatching("/api/associations-uri")).willReturn(aResponse()
                 .withHeader("Content-Type", "application/json")
-                .withBody(objectMapper.writeValueAsString(Collections.singletonMap("associationsURI", "http://localhost:8081/associations")))));
+                .withBody(objectMapper.writeValueAsString(singletonMap("associationsURI", "http://localhost:8081/associations")))));
 
         String content = readFile("data/association_me.json");
 
@@ -666,7 +698,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
     private void doPatchAssociate(String associationId) throws IOException {
         stubFor(post(urlPathMatching("/api/associations-uri")).willReturn(aResponse()
                 .withHeader("Content-Type", "application/json")
-                .withBody(objectMapper.writeValueAsString(Collections.singletonMap("associationsURI", "http://localhost:8081/associations")))));
+                .withBody(objectMapper.writeValueAsString(singletonMap("associationsURI", "http://localhost:8081/associations")))));
 
         String content = readFile("data/association_me.json");
 
@@ -690,11 +722,11 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
     private void doPlayReportBackResults(String correlationId) throws IOException {
         stubFor(post(urlPathMatching("/api/associations-uri")).willReturn(aResponse()
                 .withHeader("Content-Type", "application/json")
-                .withBody(objectMapper.writeValueAsString(Collections.singletonMap("associationsURI", "http://localhost:8081/associations")))));
+                .withBody(objectMapper.writeValueAsString(singletonMap("associationsURI", "http://localhost:8081/associations")))));
 
         //Because we are not sending an associationId, it will create one
         String associationId = UUID.randomUUID().toString();
-        String bodyFromHomeInstitution = objectMapper.writeValueAsString(Collections.singletonMap("associationId", associationId));
+        String bodyFromHomeInstitution = objectMapper.writeValueAsString(singletonMap("associationId", associationId));
         stubFor(post(urlPathMatching("/associations/external/me")).willReturn(aResponse()
                 .withHeader("Content-Type", "application/json")
                 .withBody(bodyFromHomeInstitution)));
