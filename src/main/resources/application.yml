@@ -29,6 +29,9 @@ spring:
   flyway:
     locations: classpath:db/{vendor}/migration
 
+config:
+  connection_timeout_millis: 20_000
+
 features:
   # Do we allow to mock the different scenario's - only allow on test
   allow_playground: True

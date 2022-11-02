@@ -13,10 +13,13 @@ import java.util.Map;
 public class ServiceRegistry {
 
     private final String serviceRegistryBaseURL;
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
 
-    public ServiceRegistry(@Value("${broker.service_registry_base_url}") String serviceRegistryBaseURL) {
+    public ServiceRegistry(
+            @Value("${broker.service_registry_base_url}") String serviceRegistryBaseURL,
+            @Value("${config.connection_timeout_millis}") int connectionTimeoutMillis) {
         this.serviceRegistryBaseURL = serviceRegistryBaseURL;
+        this.restTemplate = new RestTemplate(new CustomHttpComponentsClientHttpRequestFactory(connectionTimeoutMillis));
     }
 
     @SuppressWarnings("unchecked")

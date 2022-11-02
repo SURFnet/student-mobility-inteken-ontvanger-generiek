@@ -6,6 +6,7 @@ import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
+import generiek.CustomHttpComponentsClientHttpRequestFactory;
 import generiek.LanguageFilter;
 import generiek.ServiceRegistry;
 import generiek.exception.ExpiredEnrollmentRequestException;
@@ -71,7 +72,7 @@ public class EnrollmentEndpoint {
     private final AssociationRepository associationRepository;
     private final ObjectMapper objectMapper;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
     private final ParameterizedTypeReference<Map<String, Object>> mapRef = new ParameterizedTypeReference<Map<String, Object>>() {
     };
     private final JWTValidator jwtValidator = new JWTValidator();
@@ -88,6 +89,7 @@ public class EnrollmentEndpoint {
                               @Value("${backend.api_password}") String backendApiPassword,
                               @Value("${broker.url}") String brokerUrl,
                               @Value("${features.allow_playground}") boolean allowPlayground,
+                              @Value("${config.connection_timeout_millis}") int connectionTimeoutMillis,
                               EnrollmentRepository enrollmentRepository,
                               AssociationRepository associationRepository,
                               ServiceRegistry serviceRegistry,
@@ -108,6 +110,7 @@ public class EnrollmentEndpoint {
         this.serviceRegistry = serviceRegistry;
         this.objectMapper = objectMapper;
         this.allowPlayground = allowPlayground;
+        this.restTemplate = new RestTemplate(new CustomHttpComponentsClientHttpRequestFactory(connectionTimeoutMillis));
         this.restTemplate.setInterceptors(Collections.singletonList((request, body, execution) -> {
             request.getHeaders().add("Accept-Language", LanguageFilter.language.get());
             return execution.execute(request, body);
