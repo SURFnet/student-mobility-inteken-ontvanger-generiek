@@ -6,7 +6,6 @@ import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
-import generiek.CustomHttpComponentsClientHttpRequestFactory;
 import generiek.LanguageFilter;
 import generiek.ServiceRegistry;
 import generiek.exception.ExpiredEnrollmentRequestException;
@@ -110,16 +109,16 @@ public class EnrollmentEndpoint {
         this.serviceRegistry = serviceRegistry;
         this.objectMapper = objectMapper;
         this.allowPlayground = allowPlayground;
-        this.restTemplate = new RestTemplate(new CustomHttpComponentsClientHttpRequestFactory(connectionTimeoutMillis));
+        // Otherwise, we can't use method PATCH
+        OkHttpClient.Builder builder = new OkHttpClient.Builder();
+        builder.connectTimeout(connectionTimeoutMillis, TimeUnit.MILLISECONDS);
+        builder.readTimeout(connectionTimeoutMillis, TimeUnit.MILLISECONDS);
+        builder.retryOnConnectionFailure(true);
+        this.restTemplate = new RestTemplate(new OkHttp3ClientHttpRequestFactory(builder.build()));
         this.restTemplate.setInterceptors(Collections.singletonList((request, body, execution) -> {
             request.getHeaders().add("Accept-Language", LanguageFilter.language.get());
             return execution.execute(request, body);
         }));
-        // Otherwise, we can't use method PATCH
-        OkHttpClient.Builder builder = new OkHttpClient.Builder();
-        builder.connectTimeout(5, TimeUnit.MINUTES);
-        builder.retryOnConnectionFailure(true);
-        restTemplate.setRequestFactory(new OkHttp3ClientHttpRequestFactory(builder.build()));
     }
 
     @InitBinder
@@ -282,7 +281,7 @@ public class EnrollmentEndpoint {
             association = associationRepository.findByAssociationId((String) results.get("associationId"))
                     .orElseThrow(ExpiredEnrollmentRequestException::new);
             return this.associationUpdate(association.getAssociationId(), newResults);
-        } else if (results.containsKey("v4")){
+        } else if (results.containsKey("v4")) {
             return this.results(newResults);
         } else {
             return this.associate(enrollmentRequest.getEduid(), results);
@@ -345,7 +344,7 @@ public class EnrollmentEndpoint {
      * to the home institution. V4 version for backward compatibility.
      */
     @PostMapping("/api/results")
-    public ResponseEntity<Map<String, Object>>  results(@RequestBody Map<String, Object> results) {
+    public ResponseEntity<Map<String, Object>> results(@RequestBody Map<String, Object> results) {
         String personId = (String) results.get("personId");
         EnrollmentRequest enrollmentRequest = getEnrollmentRequest(personId);
 
@@ -362,6 +361,7 @@ public class EnrollmentEndpoint {
         Map<String, Object> body = EnrollmentAssociation.transform(results, enrollmentRequest);
         return exchangeToHomeInstitution(enrollmentRequest, body, resultsURI, HttpMethod.POST, true);
     }
+
     /*
      * Called by the playground
      */

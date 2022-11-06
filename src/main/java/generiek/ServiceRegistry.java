@@ -1,13 +1,16 @@
 package generiek;
 
 import generiek.model.EnrollmentRequest;
+import okhttp3.OkHttpClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
+import org.springframework.http.client.OkHttp3ClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.Collections;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 @Component
 public class ServiceRegistry {
@@ -19,7 +22,11 @@ public class ServiceRegistry {
             @Value("${broker.service_registry_base_url}") String serviceRegistryBaseURL,
             @Value("${config.connection_timeout_millis}") int connectionTimeoutMillis) {
         this.serviceRegistryBaseURL = serviceRegistryBaseURL;
-        this.restTemplate = new RestTemplate(new CustomHttpComponentsClientHttpRequestFactory(connectionTimeoutMillis));
+        OkHttpClient.Builder builder = new OkHttpClient.Builder();
+        builder.connectTimeout(connectionTimeoutMillis, TimeUnit.MILLISECONDS);
+        builder.readTimeout(connectionTimeoutMillis, TimeUnit.MILLISECONDS);
+        builder.retryOnConnectionFailure(true);
+        this.restTemplate = new RestTemplate(new OkHttp3ClientHttpRequestFactory(builder.build()));
     }
 
     @SuppressWarnings("unchecked")
