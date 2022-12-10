@@ -11,22 +11,23 @@ import com.nimbusds.jwt.proc.ConfigurableJWTProcessor;
 import com.nimbusds.jwt.proc.DefaultJWTProcessor;
 import lombok.SneakyThrows;
 
+import java.net.MalformedURLException;
 import java.net.URL;
 
 public class JWTValidator {
 
-    private final ConfigurableJWTProcessor<SecurityContext> jwtProcessor = new DefaultJWTProcessor<>();
+    private final ConfigurableJWTProcessor<SecurityContext> jwtProcessor;
+
+    public JWTValidator(String jwkSetUri) throws MalformedURLException {
+        this.jwtProcessor = new DefaultJWTProcessor<>();
+        JWSKeySelector<SecurityContext> keySelector =
+                new JWSVerificationKeySelector<>(JWSAlgorithm.RS256, new RemoteJWKSet<>(new URL(jwkSetUri)));
+        this.jwtProcessor.setJWSKeySelector(keySelector);
+    }
 
     @SneakyThrows
-    public JWTClaimsSet validate(String jwtToken, JWKSource<SecurityContext> keySource) {
-        JWSKeySelector<SecurityContext> keySelector =
-                new JWSVerificationKeySelector<>(JWSAlgorithm.RS256, keySource);
-        jwtProcessor.setJWSKeySelector(keySelector);
+    public JWTClaimsSet validate(String jwtToken) {
         return jwtProcessor.process(jwtToken, null);
     }
 
-    @SneakyThrows
-    public JWKSource<SecurityContext> parseKeySet(String jwkSetUri) {
-        return new RemoteJWKSet<>(new URL(jwkSetUri));
-    }
 }

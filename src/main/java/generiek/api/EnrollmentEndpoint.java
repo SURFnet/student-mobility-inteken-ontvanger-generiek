@@ -1,8 +1,6 @@
 package generiek.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nimbusds.jose.jwk.source.JWKSource;
-import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
@@ -38,6 +36,7 @@ import org.springframework.web.servlet.view.RedirectView;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.text.ParseException;
@@ -60,7 +59,6 @@ public class EnrollmentEndpoint {
     private final String redirectUri;
     private final URI authorizationUri;
     private final URI tokenUri;
-    private final String jwkSetUri;
     private final URI backendUrl;
     private final String backendApiUser;
     private final String backendApiPassword;
@@ -74,7 +72,7 @@ public class EnrollmentEndpoint {
     private final RestTemplate restTemplate;
     private final ParameterizedTypeReference<Map<String, Object>> mapRef = new ParameterizedTypeReference<Map<String, Object>>() {
     };
-    private final JWTValidator jwtValidator = new JWTValidator();
+    private final JWTValidator jwtValidator;
 
     public EnrollmentEndpoint(@Value("${oidc.acr-context-class-ref}") String acr,
                               @Value("${oidc.client-id}") String clientId,
@@ -92,14 +90,14 @@ public class EnrollmentEndpoint {
                               EnrollmentRepository enrollmentRepository,
                               AssociationRepository associationRepository,
                               ServiceRegistry serviceRegistry,
-                              ObjectMapper objectMapper) {
+                              ObjectMapper objectMapper) throws MalformedURLException {
         this.acr = acr;
         this.clientId = clientId;
         this.clientSecret = clientSecret;
         this.redirectUri = redirectUri;
         this.authorizationUri = authorizationUri;
         this.tokenUri = tokenUri;
-        this.jwkSetUri = jwkSetUri;
+        this.jwtValidator = new JWTValidator(jwkSetUri);
         this.backendUrl = backendUrl;
         this.backendApiUser = backendApiUser;
         this.backendApiPassword = backendApiPassword;
@@ -177,9 +175,8 @@ public class EnrollmentEndpoint {
         String refreshToken = (String) body.get("refresh_token");
         String idToken = (String) body.get("id_token");
 
-        JWKSource<SecurityContext> securityContextJWKSource = jwtValidator.parseKeySet(jwkSetUri);
-        jwtValidator.validate(accessToken, securityContextJWKSource);
-        JWTClaimsSet claimsSet = jwtValidator.validate(idToken, securityContextJWKSource);
+        jwtValidator.validate(accessToken);
+        JWTClaimsSet claimsSet = jwtValidator.validate(idToken);
 
         String givenName = claimsSet.getStringClaim("given_name");
         //Very unlikely and why break on this?

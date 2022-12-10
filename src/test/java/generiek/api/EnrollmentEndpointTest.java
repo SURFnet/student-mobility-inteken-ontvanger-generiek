@@ -22,7 +22,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -769,7 +768,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
     }
 
     private String accessToken(Map<String, String> claims) throws NoSuchProviderException, NoSuchAlgorithmException, JOSEException, IOException {
-        String keyId = "key_id";
+        String keyId = UUID.randomUUID().toString();
         RSAKey rsaKey = generateRsaKey(keyId);
         JWKSet jwkSet = new JWKSet(rsaKey.toPublicJWK());
         Map<String, Object> jwkSetMap = jwkSet.toJSONObject();

@@ -2,22 +2,20 @@ package generiek.jwt;
 
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
+import java.net.MalformedURLException;
 import java.text.ParseException;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class JWTValidatorTest {
 
-    private JWTValidator subject = new JWTValidator();
+    private final JWTValidator subject = new JWTValidator("http://localhost");
 
-    @Test
-    void validate() {
-        assertThrows(ParseException.class, () -> subject.validate("nope", subject.parseKeySet("http://localhost")));
+    JWTValidatorTest() throws MalformedURLException {
     }
 
     @Test
-    void parseKeySet() {
-        assertThrows(IOException.class, () -> subject.parseKeySet("nope"));
+    void validate() {
+        assertThrows(ParseException.class, () -> subject.validate("nope"));
     }
 }
