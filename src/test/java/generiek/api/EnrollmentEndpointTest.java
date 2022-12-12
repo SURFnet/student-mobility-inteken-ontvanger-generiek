@@ -18,6 +18,7 @@ import io.restassured.http.ContentType;
 import lombok.SneakyThrows;
 import org.apache.commons.io.IOUtils;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,6 +47,11 @@ import static org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED_VAL
 
 public class EnrollmentEndpointTest extends AbstractIntegrationTest {
 
+    private static RSAKey rsaKey;
+    private static JWSSigner jwsSigner;
+    private static Map<String, Object> jwkSetMap;
+    private static final String keyId = UUID.randomUUID().toString();
+
     private static final BouncyCastleProvider bcProvider = new BouncyCastleProvider();
 
     static {
@@ -66,6 +72,13 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
 
     @Value("${broker.url}")
     private String brokerUrl;
+
+    @BeforeAll
+    static void beforeAll() throws JOSEException, NoSuchAlgorithmException, NoSuchProviderException {
+        EnrollmentEndpointTest.rsaKey = generateRsaKey(keyId);
+        EnrollmentEndpointTest.jwkSetMap = new JWKSet(rsaKey.toPublicJWK()).toJSONObject();
+        EnrollmentEndpointTest.jwsSigner = new RSASSASigner(rsaKey);
+    }
 
     @Test
     void expiredEnrollmentRequest() {
@@ -767,11 +780,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
         return IOUtils.toString(new ClassPathResource(path).getInputStream());
     }
 
-    private String accessToken(Map<String, String> claims) throws NoSuchProviderException, NoSuchAlgorithmException, JOSEException, IOException {
-        String keyId = UUID.randomUUID().toString();
-        RSAKey rsaKey = generateRsaKey(keyId);
-        JWKSet jwkSet = new JWKSet(rsaKey.toPublicJWK());
-        Map<String, Object> jwkSetMap = jwkSet.toJSONObject();
+    private String accessToken(Map<String, String> claims) throws JOSEException, IOException {
         stubFor(get(urlPathMatching("/oidc/certs")).willReturn(aResponse()
                 .withHeader("Content-Type", "application/json")
                 .withBody(objectMapper.writeValueAsString(jwkSetMap))));
@@ -790,12 +799,11 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
         JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.RS256).type(JOSEObjectType.JWT)
                 .keyID(keyId).build();
         SignedJWT signedJWT = new SignedJWT(header, claimsSet);
-        JWSSigner jwsSigner = new RSASSASigner(rsaKey);
         signedJWT.sign(jwsSigner);
         return signedJWT.serialize();
     }
 
-    private RSAKey generateRsaKey(String keyID) throws NoSuchProviderException, NoSuchAlgorithmException {
+    private static RSAKey generateRsaKey(String keyID) throws NoSuchProviderException, NoSuchAlgorithmException {
         KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA", "BC");
         kpg.initialize(2048);
         KeyPair keyPair = kpg.generateKeyPair();
