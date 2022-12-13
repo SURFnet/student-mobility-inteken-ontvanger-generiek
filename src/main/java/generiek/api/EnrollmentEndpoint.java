@@ -28,6 +28,7 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
@@ -138,6 +139,10 @@ public class EnrollmentEndpoint {
             this.validateServiceRegistryEndpoints(enrollmentRequest);
         } catch (RuntimeException e) {
             LOG.error("Invalid enrollmentRequest: " + enrollmentRequest, e);
+            if (e instanceof HttpClientErrorException) {
+                HttpClientErrorException ex = (HttpClientErrorException) e;
+                LOG.error("Invalid enrollmentRequest: " + ex.getResponseBodyAsString());
+            }
             String redirect = String.format("%s?error=%s", brokerUrl, "Invalid enrollmentRequest");
             return new RedirectView(redirect, false);
         }
