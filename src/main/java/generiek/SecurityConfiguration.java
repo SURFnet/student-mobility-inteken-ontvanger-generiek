@@ -69,7 +69,7 @@ public class SecurityConfiguration {
                             "/api/results",
                             "/associations/**",
                             "/api/play-results",
-                            "api/me",
+                            "/api/me",
                             "/person/**")
                     .and()
                     .csrf()
