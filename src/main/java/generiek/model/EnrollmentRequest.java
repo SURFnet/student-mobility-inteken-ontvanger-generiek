@@ -17,6 +17,7 @@ import java.io.Serializable;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.*;
 import java.util.zip.GZIPInputStream;
@@ -99,6 +100,10 @@ public class EnrollmentRequest implements Serializable {
 
     public static EnrollmentRequest serializeFromBase64(ObjectMapper objectMapper, String base64) throws IOException {
         byte[] decoded = Base64.getDecoder().decode(URLDecoder.decode(base64, Charset.defaultCharset().name()));
+        //Equal or more than 42 KB is considered a gzip bomb attack
+        if (decoded.length / 1024  >= 42) {
+            throw new IllegalArgumentException("GZip bomb detected");
+        }
         ByteArrayInputStream bis = new ByteArrayInputStream(decoded);
         GZIPInputStream gin = new GZIPInputStream(bis);
 
