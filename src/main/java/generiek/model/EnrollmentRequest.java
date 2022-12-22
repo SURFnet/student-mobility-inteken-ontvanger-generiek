@@ -2,7 +2,6 @@ package generiek.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nimbusds.jose.util.IOUtils;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -17,7 +16,6 @@ import java.io.Serializable;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.*;
 import java.util.zip.GZIPInputStream;
@@ -95,13 +93,14 @@ public class EnrollmentRequest implements Serializable {
         gout.write(bytes);
         gout.finish();
 
-        return URLEncoder.encode(Base64.getEncoder().encodeToString(bos.toByteArray()), Charset.defaultCharset().name()) ;
+        return URLEncoder.encode(Base64.getEncoder().encodeToString(bos.toByteArray()), Charset.defaultCharset().name());
     }
 
+    @SuppressWarnings("unchecked")
     public static EnrollmentRequest serializeFromBase64(ObjectMapper objectMapper, String base64) throws IOException {
         byte[] decoded = Base64.getDecoder().decode(URLDecoder.decode(base64, Charset.defaultCharset().name()));
         //Equal or more than 42 KB is considered a gzip bomb attack
-        if (decoded.length / 1024  >= 42) {
+        if (decoded.length / 1024 >= 42) {
             throw new IllegalArgumentException("GZip bomb detected");
         }
         ByteArrayInputStream bis = new ByteArrayInputStream(decoded);
