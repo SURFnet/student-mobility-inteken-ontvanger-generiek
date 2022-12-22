@@ -22,6 +22,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.http.client.OkHttp3ClientHttpRequestFactory;
+import org.springframework.lang.Nullable;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -143,7 +144,7 @@ public class EnrollmentEndpoint {
                 HttpClientErrorException ex = (HttpClientErrorException) e;
                 LOG.error("Invalid enrollmentRequest: " + ex.getResponseBodyAsString());
             }
-            String redirect = String.format("%s?error=%s", brokerUrl, "Invalid enrollmentRequest");
+            String redirect = String.format("%s?error=%s", brokerUrl, 412);
             return new RedirectView(redirect, false);
         }
         //Start authorization flow
@@ -172,7 +173,7 @@ public class EnrollmentEndpoint {
         } catch (RestClientException e) {
             LOG.error("Exception in token request", e);
 
-            String redirect = String.format("%s?error=%s", brokerUrl, "Session lost. Please try again");
+            String redirect = String.format("%s?error=%s", brokerUrl, 417);
             return new RedirectView(redirect, false);
         }
 
@@ -190,7 +191,8 @@ public class EnrollmentEndpoint {
 
         String eduid = claimsSet.getStringClaim("eduid");
         if (!StringUtils.hasText(eduid)) {
-            String redirect = String.format("%s?error=%s", brokerUrl, "eduid is required. Check the ARP for RP:" + this.clientId);
+            LOG.error("eduid is required. Check the ARP for RP:" + this.clientId);
+            String redirect = String.format("%s?error=%s", brokerUrl, 419);
             return new RedirectView(redirect, false);
         }
         EnrollmentRequest enrollmentRequest;
@@ -199,7 +201,7 @@ public class EnrollmentEndpoint {
         } catch (IllegalArgumentException | IOException e) {
             LOG.error("Redirect after authorization called and no valid enrollment request", e);
 
-            String redirect = String.format("%s?error=%s", brokerUrl, "Session lost. Please try again");
+            String redirect = String.format("%s?error=%s", brokerUrl, 417);
             return new RedirectView(redirect, false);
         }
 
@@ -225,8 +227,7 @@ public class EnrollmentEndpoint {
 
         HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(map, headers);
 
-        return restTemplate.exchange(tokenUri, HttpMethod.POST, request, new ParameterizedTypeReference<Map<String, Object>>() {
-        }).getBody();
+        return restTemplate.exchange(tokenUri, HttpMethod.POST, request, mapRef).getBody();
     }
 
     /*
@@ -260,7 +261,16 @@ public class EnrollmentEndpoint {
 
         LOG.debug("Returning registration result to broker");
         try {
-            return restTemplate.exchange(backendUrl, HttpMethod.POST, httpEntity, mapRef);
+            ResponseEntity<Map<String, Object>> results = restTemplate.exchange(backendUrl, HttpMethod.POST, httpEntity, mapRef);
+            int code = (int) results.getBody().getOrDefault("code", 400);
+            if (code >= 400) {
+                //Body can be immutable
+                Map<String, Object> copy = new HashMap<>(results.getBody());
+                copy.put("reference", String.valueOf(Math.round(Math.random() * 10000)));
+                LOG.error(String.format("Error in registration results %s for enrollmentRequest %s", copy, enrollmentRequest));
+                return ResponseEntity.ok(copy);
+            }
+            return results;
         } catch (HttpStatusCodeException e) {
             return this.errorResponseEntity("Error in registration results for enrollmentRequest: " + enrollmentRequest, e);
         }
@@ -421,7 +431,9 @@ public class EnrollmentEndpoint {
 
         try {
             ResponseEntity<Map<String, Object>> exchanged = restTemplate.exchange(uri, httpMethod, requestEntity, mapRef);
+
             LOG.debug(String.format("Received answer from %s with status %s", uri, exchanged.getStatusCode()));
+
             return ResponseEntity.ok().body(exchanged.getBody());
         } catch (HttpStatusCodeException e) {
             if (retry) {
@@ -468,6 +480,7 @@ public class EnrollmentEndpoint {
         Map<String, Object> results = new HashMap<>();
         results.put("error", true);
         results.put("message", e.getMessage());
+        results.put("details", e.getResponseBodyAsString());
         results.put("description", description);
         results.put("status", e.getStatusCode());
         //Preserve the status from the Exception

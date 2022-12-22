@@ -186,7 +186,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                 .param("scope", "write")
                 .post("/api/enrollment")
                 .header("Location");
-        assertEquals("http://localhost:3003?error=Invalid enrollmentRequest", location);
+        assertEquals("http://localhost:3003?error=412", location);
     }
 
     @Test
@@ -209,7 +209,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                 .queryParam("state", state)
                 .get("/redirect_uri")
                 .header("Location");
-        assertEquals("http://localhost:3003?error=eduid is required. Check the ARP for RP:student.mobility.rp.localhost", location);
+        assertEquals("http://localhost:3003?error=419", location);
     }
 
     @Test
@@ -522,7 +522,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                 .queryParam("state", "bogus")
                 .get("/redirect_uri")
                 .header("Location");
-        assertEquals("http://localhost:3003?error=Session lost. Please try again", location);
+        assertEquals("http://localhost:3003?error=417", location);
     }
 
     @Test
@@ -540,7 +540,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                 .statusCode(SC_MOVED_TEMPORARILY)
                 .extract()
                 .header("Location");
-        assertEquals("http://localhost:3003?error=Session lost. Please try again", location);
+        assertEquals("http://localhost:3003?error=417", location);
     }
 
     @Test

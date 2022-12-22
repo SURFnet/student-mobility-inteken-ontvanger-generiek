@@ -5,6 +5,9 @@ logging:
 
 server:
   port: 8092
+  error:
+    path: "/error"
+    include-message: always
   servlet:
     session:
       tracking-modes: cookie
