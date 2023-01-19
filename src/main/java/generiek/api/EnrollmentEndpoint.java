@@ -22,7 +22,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.http.client.OkHttp3ClientHttpRequestFactory;
-import org.springframework.lang.Nullable;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -266,7 +265,7 @@ public class EnrollmentEndpoint {
             if (code >= 400) {
                 //Body can be immutable
                 Map<String, Object> copy = new HashMap<>(results.getBody());
-                copy.put("reference", String.valueOf(Math.round(Math.random() * 10000)));
+                copy.put("reference", referenceCorrelation());
                 LOG.error(String.format("Error in registration results %s for enrollmentRequest %s", copy, enrollmentRequest));
                 return ResponseEntity.ok(copy);
             }
@@ -274,6 +273,10 @@ public class EnrollmentEndpoint {
         } catch (HttpStatusCodeException e) {
             return this.errorResponseEntity("Error in registration results for enrollmentRequest: " + enrollmentRequest, e);
         }
+    }
+
+    private String referenceCorrelation() {
+        return String.valueOf(Math.round(Math.random() * 10000));
     }
 
     /*
@@ -475,10 +478,12 @@ public class EnrollmentEndpoint {
     }
 
     private ResponseEntity<Map<String, Object>> errorResponseEntity(String description, HttpStatusCodeException e) {
-        LOG.error(description, e);
+        String reference = referenceCorrelation();
+        LOG.error(String.format("%s, reference: %s", description, reference), e);
 
         Map<String, Object> results = new HashMap<>();
         results.put("error", true);
+        results.put("reference", reference);
         results.put("message", e.getMessage());
         results.put("details", e.getResponseBodyAsString());
         results.put("description", description);
