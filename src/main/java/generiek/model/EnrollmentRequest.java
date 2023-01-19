@@ -5,8 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import lombok.ToString;
 import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
 
 import javax.persistence.*;
 import java.io.ByteArrayInputStream;
@@ -25,7 +25,6 @@ import java.util.zip.GZIPOutputStream;
 @NoArgsConstructor
 @Getter
 @Setter
-@ToString
 public class EnrollmentRequest implements Serializable {
 
     @Id
@@ -94,6 +93,20 @@ public class EnrollmentRequest implements Serializable {
         gout.finish();
 
         return URLEncoder.encode(Base64.getEncoder().encodeToString(bos.toByteArray()), Charset.defaultCharset().name());
+    }
+
+    public String toString() {
+        return "EnrollmentRequest(id=" + this.getId() +
+                ", identifier=" + this.getIdentifier() +
+                ", personURI=" + this.getPersonURI() +
+                ", homeInstitution=" + this.getHomeInstitution() +
+                ", personAuth=" + this.getPersonAuth() +
+                ", associations=" + this.getAssociations() +
+                ", eduid=" + this.getEduid() +
+                ", accessToken=" + StringUtils.hasText(this.getAccessToken()) +
+                ", refreshToken=" + StringUtils.hasText(this.getRefreshToken()) +
+                ", scope=" + this.getScope() +
+                ", created=" + this.getCreated() + ")";
     }
 
     @SuppressWarnings("unchecked")
