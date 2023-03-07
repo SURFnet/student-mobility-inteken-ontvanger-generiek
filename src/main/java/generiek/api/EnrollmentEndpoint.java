@@ -88,6 +88,9 @@ public class EnrollmentEndpoint {
                               @Value("${broker.url}") String brokerUrl,
                               @Value("${features.allow_playground}") boolean allowPlayground,
                               @Value("${config.connection_timeout_millis}") int connectionTimeoutMillis,
+                              @Value("${oidc.jwk.connect-timeout}") int jwkConnectionTimeout,
+                              @Value("${oidc.jwk.read-timeout}") int jwkReadTimeout,
+                              @Value("${oidc.jwk.size-limit}") int jwkSizeLimit,
                               EnrollmentRepository enrollmentRepository,
                               AssociationRepository associationRepository,
                               ServiceRegistry serviceRegistry,
@@ -98,7 +101,7 @@ public class EnrollmentEndpoint {
         this.redirectUri = redirectUri;
         this.authorizationUri = authorizationUri;
         this.tokenUri = tokenUri;
-        this.jwtValidator = new JWTValidator(jwkSetUri);
+        this.jwtValidator = new JWTValidator(jwkSetUri, jwkConnectionTimeout, jwkReadTimeout, jwkSizeLimit);
         this.backendUrl = backendUrl;
         this.backendApiUser = backendApiUser;
         this.backendApiPassword = backendApiPassword;

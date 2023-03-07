@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class JWTValidatorTest {
 
-    private final JWTValidator subject = new JWTValidator("http://localhost");
+    private final JWTValidator subject = new JWTValidator("http://localhost", 500, 500, 10 * 1024);
 
     JWTValidatorTest() throws MalformedURLException {
     }
