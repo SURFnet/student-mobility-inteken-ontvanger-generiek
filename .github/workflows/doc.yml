@@ -9,7 +9,7 @@ jobs:
     name: Lint documentation markup
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: lint all md files
         uses: nosborn/github-action-markdown-cli@v2.0.0
