@@ -22,6 +22,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.http.client.OkHttp3ClientHttpRequestFactory;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -133,6 +134,7 @@ public class EnrollmentEndpoint {
      * Endpoint called by the student-mobility-broker form submit
      */
     @PostMapping(value = "/api/enrollment", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+    @Transactional
     public View enrollment(@ModelAttribute EnrollmentRequest enrollmentRequest) throws IOException {
         LOG.debug("Received authorization for enrollment request: " + enrollmentRequest);
         // Prevent forgery and cherry-pick attributes
@@ -161,6 +163,7 @@ public class EnrollmentEndpoint {
      * Redirect after authentication. Give browser-control back to the client to call start and show progress-spinner
      */
     @GetMapping("/redirect_uri")
+    @Transactional
     public View redirect(@RequestParam("code") String code, @RequestParam("state") String state) throws ParseException, IOException {
         MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
         map.add("client_id", clientId);
@@ -236,6 +239,7 @@ public class EnrollmentEndpoint {
      * Start the actual enrollment based on the data returned from the 'me' endpoint
      */
     @PostMapping("/api/start")
+    @Transactional
     public ResponseEntity<Map<String, Object>> start(
             @RequestHeader("X-Correlation-ID") String correlationId,
             @RequestBody Map<String, Object> offering) {
@@ -286,6 +290,7 @@ public class EnrollmentEndpoint {
      * Called by the Broker on behalf of the test user
      */
     @PostMapping("/api/play-results")
+    @Transactional
     public ResponseEntity<Map<String, Object>> playResults(@RequestHeader("X-Correlation-ID") String correlationId,
                                                            @RequestBody Map<String, Object> results) {
         if (!allowPlayground) {
@@ -311,6 +316,7 @@ public class EnrollmentEndpoint {
      * enrollment
      */
     @PostMapping("/associations/external/{personId}")
+    @Transactional
     public ResponseEntity<Map<String, Object>> associate(@PathVariable("personId") String personId,
                                                          @RequestBody Map<String, Object> association) {
         EnrollmentRequest enrollmentRequest = getEnrollmentRequest(personId);
@@ -338,6 +344,7 @@ public class EnrollmentEndpoint {
      * enrollment
      */
     @PatchMapping("/associations/{associationId}")
+    @Transactional
     public ResponseEntity<Map<String, Object>> associationUpdate(@PathVariable("associationId") String associationId,
                                                                  @RequestBody Map<String, Object> association) {
         EnrollmentRequest enrollmentRequest = associationRepository.findByAssociationId(associationId)
@@ -362,6 +369,7 @@ public class EnrollmentEndpoint {
      * to the home institution. V4 version for backward compatibility.
      */
     @PostMapping("/api/results")
+    @Transactional
     public ResponseEntity<Map<String, Object>> results(@RequestBody Map<String, Object> results) {
         String personId = (String) results.get("personId");
         EnrollmentRequest enrollmentRequest = getEnrollmentRequest(personId);
@@ -384,6 +392,7 @@ public class EnrollmentEndpoint {
      * Called by the playground
      */
     @GetMapping("/api/me")
+    @Transactional
     public ResponseEntity<Map<String, Object>> me(@RequestHeader("X-Correlation-ID") String correlationId) {
         if (!allowPlayground) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
@@ -396,6 +405,7 @@ public class EnrollmentEndpoint {
      * Called by the SIS of the guest institution to validate the status of a guest-user
      */
     @GetMapping("/person/{personId}")
+    @Transactional
     public ResponseEntity<Map<String, Object>> person(@PathVariable("personId") String personId) {
         EnrollmentRequest enrollmentRequest = getEnrollmentRequest(personId);
 

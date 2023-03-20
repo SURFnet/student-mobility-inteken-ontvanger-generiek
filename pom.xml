@@ -10,7 +10,7 @@
     </parent>
     <groupId>org.surfnet</groupId>
     <artifactId>student-mobility-inteken-ontvanger-generiek</artifactId>
-   <version>0.2.3</version>
+    <version>0.2.3-SNAPSHOT</version>
     <name>inteken-ontvanger-generiek</name>
     <description>inteken-ontvanger-generiek</description>
 
@@ -54,7 +54,7 @@
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
-            <version>42.3.1</version>
+            <version>42.6.0</version>
             <scope>runtime</scope>
         </dependency>
         <dependency>
