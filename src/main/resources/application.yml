@@ -21,7 +21,7 @@ spring:
         naming-strategy: org.hibernate.cfg.ImprovedNamingStrategy
 #        dialect: org.hibernate.dialect.PostgreSQL10Dialect
         dialect: org.hibernate.dialect.H2Dialect
-    open-in-view: true
+    open-in-view: false
   datasource:
     driver-class-name: org.h2.Driver
     url: jdbc:h2:file:./database/student-mobility
