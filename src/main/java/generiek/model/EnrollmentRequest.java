@@ -43,7 +43,7 @@ public class EnrollmentRequest implements Serializable {
     @Column(name = "person_auth")
     private String personAuth;
 
-    @OneToMany(mappedBy = "enrollmentRequest", orphanRemoval = true)
+    @OneToMany(mappedBy = "enrollmentRequest", orphanRemoval = true, fetch = FetchType.EAGER)
     @JsonIgnore
     private Set<Association> associations = new HashSet<>();
 
