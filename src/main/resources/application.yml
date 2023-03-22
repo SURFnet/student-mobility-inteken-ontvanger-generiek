@@ -34,6 +34,8 @@ spring:
 
 config:
   connection_timeout_millis: 20_000
+  connection_pool_keep_alive_duration_millis: 300_000
+  connection_pool_max_idle_connections: 256
 
 features:
   # Do we allow to mock the different scenario's - only allow on test
