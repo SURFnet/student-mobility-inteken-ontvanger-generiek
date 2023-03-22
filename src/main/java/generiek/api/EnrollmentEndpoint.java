@@ -15,6 +15,7 @@ import generiek.ooapi.EnrollmentAssociation;
 import generiek.repository.AssociationRepository;
 import generiek.repository.EnrollmentRepository;
 import lombok.SneakyThrows;
+import okhttp3.ConnectionPool;
 import okhttp3.OkHttpClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -22,7 +23,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.http.client.OkHttp3ClientHttpRequestFactory;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -89,6 +89,8 @@ public class EnrollmentEndpoint {
                               @Value("${broker.url}") String brokerUrl,
                               @Value("${features.allow_playground}") boolean allowPlayground,
                               @Value("${config.connection_timeout_millis}") int connectionTimeoutMillis,
+                              @Value("${config.connection_pool_keep_alive_duration_millis}") int keepAliveDurationMillis,
+                              @Value("${config.connection_pool_max_idle_connections}") int maxIdleConnections,
                               @Value("${oidc.jwk.connect-timeout}") int jwkConnectionTimeout,
                               @Value("${oidc.jwk.read-timeout}") int jwkReadTimeout,
                               @Value("${oidc.jwk.size-limit}") int jwkSizeLimit,
@@ -114,9 +116,12 @@ public class EnrollmentEndpoint {
         this.allowPlayground = allowPlayground;
         // Otherwise, we can't use method PATCH
         OkHttpClient.Builder builder = new OkHttpClient.Builder();
-        builder.connectTimeout(connectionTimeoutMillis, TimeUnit.MILLISECONDS);
-        builder.readTimeout(connectionTimeoutMillis, TimeUnit.MILLISECONDS);
-        builder.retryOnConnectionFailure(true);
+        builder
+                .connectTimeout(connectionTimeoutMillis, TimeUnit.MILLISECONDS)
+                .readTimeout(connectionTimeoutMillis, TimeUnit.MILLISECONDS)
+                .retryOnConnectionFailure(true)
+                .connectionPool(new ConnectionPool(maxIdleConnections, keepAliveDurationMillis, TimeUnit.MILLISECONDS));
+
         this.restTemplate = new RestTemplate(new OkHttp3ClientHttpRequestFactory(builder.build()));
         this.restTemplate.setInterceptors(Collections.singletonList((request, body, execution) -> {
             request.getHeaders().add("Accept-Language", LanguageFilter.language.get());
