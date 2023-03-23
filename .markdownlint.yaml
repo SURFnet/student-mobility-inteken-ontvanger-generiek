@@ -1,3 +1,4 @@
+---
 # MD013/line-length - Line length
 MD013:
   # Number of characters
@@ -12,4 +13,3 @@ MD013:
   tables: false
 
 MD024: false
-

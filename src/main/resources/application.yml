@@ -1,3 +1,4 @@
+---
 logging:
   level:
     root: INFO
@@ -19,37 +20,40 @@ spring:
     properties:
       hibernate:
         naming-strategy: org.hibernate.cfg.ImprovedNamingStrategy
-#        dialect: org.hibernate.dialect.PostgreSQL10Dialect
+        # dialect: org.hibernate.dialect.PostgreSQL10Dialect
         dialect: org.hibernate.dialect.H2Dialect
     open-in-view: false
   datasource:
     driver-class-name: org.h2.Driver
     url: jdbc:h2:file:./database/student-mobility
-#    driver-class-name: org.postgresql.Driver
-#    url: jdbc:postgresql://localhost:5432/mobility
-#    username: mobility_rw
-#    password: secret
+    # driver-class-name: org.postgresql.Driver
+    # url: jdbc:postgresql://localhost:5432/mobility
+    # username: mobility_rw
+    # password: secret
   flyway:
     locations: classpath:db/{vendor}/migration
 
 config:
   connection_timeout_millis: 20_000
   connection_pool_keep_alive_duration_millis: 300_000
-  # Set to 0 to disable connection-pooling. If responses are slow, connection-pooling does not matter anyway
+  # Set to 0 to disable connection-pooling. If responses are slow,
+  # connection-pooling does not matter anyway
   connection_pool_max_idle_connections: 256
 
 features:
   # Do we allow to mock the different scenario's - only allow on test
-  allow_playground: True
+  allow_playground: true
 
-# URL of the broker-gui to redirect back after authentication and the credentials of the broker-server to check against
+# URL of the broker-gui to redirect back after authentication and the
+# credentials of the broker-server to check against
 broker:
   url: "http://localhost:3003"
   user: user
   password: secret
   service_registry_base_url: "http://localhost:8091"
 
-# Credentials of the SIS (e.g. Osiris) to check against when reporting back results
+# Credentials of the SIS (e.g. Osiris) to check against when
+# reporting back results
 sis:
   user: sis
   password: secret
@@ -75,9 +79,9 @@ oidc:
     read-timeout: 1500
     # The HTTP entity size limit for JWK set retrieval, in bytes
     size-limit: 153_600
-  #            authorization-uri: http://localhost:8080/oidc/authorize
-  #            token-uri: http://localhost:8080/oidc/token
-  #            jwk-set-uri: http://localhost:8080/oidc/certs
+    # authorization-uri: http://localhost:8080/oidc/authorize
+    # token-uri: http://localhost:8080/oidc/token
+    # jwk-set-uri: http://localhost:8080/oidc/certs
 
 management:
   endpoints:
