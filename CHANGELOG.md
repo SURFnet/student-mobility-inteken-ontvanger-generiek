@@ -6,11 +6,13 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
-Configuration for JWK set timeout and max size
+- Configuration for JWK set timeout and max size
+- Configure connection pool settings for long waits
+- Improve handling database connections under load
 
 ### Config changes
 
-[Extra config in application.yml](https://github.com/SURFnet/student-mobility-inteken-ontvanger-generiek/blob/8e9cb49f4c7e22f5789c4bb8bb988a5b75526f87/src/main/resources/application.yml#L68...L74) for JWT
+[Extra config in application.yml](https://github.com/SURFnet/student-mobility-inteken-ontvanger-generiek/blob/8e9cb49f4c7e22f5789c4bb8bb988a5b75526f87/src/main/resources/application.yml#L68...L74) for JWK set JWK set retrieval
 
 ```yaml
   jwk:
@@ -20,6 +22,16 @@ Configuration for JWK set timeout and max size
     read-timeout: 1500
     # The HTTP entity size limit for JWK set retrieval, in bytes
     size-limit: 153_600
+```
+
+Extra config in application.yml for connections to backend
+
+```yaml
+config:
+  connection_timeout_millis: 20_000
+  connection_pool_keep_alive_duration_millis: 300_000
+  # Set to 0 to disable connection-pooling. If responses are slow, connection-pooling does not matter anyway
+  connection_pool_max_idle_connections: 256
 ```
 
 ## [0.2.2]
