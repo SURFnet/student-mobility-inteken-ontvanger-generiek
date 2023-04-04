@@ -332,7 +332,7 @@ public class EnrollmentEndpoint {
         LOG.debug(String.format("Posting association endpoint for personId %s and enrolment request %s to %s", personId, enrollmentRequest, associationURI));
 
         ResponseEntity<Map<String, Object>> responseEntity = exchangeToHomeInstitution(enrollmentRequest, association, associationURI, HttpMethod.POST, true);
-        if (responseEntity.getStatusCode().value() == 201) {
+        if (HttpStatus.CREATED.equals(responseEntity.getStatusCode())) {
             String associationId = (String) responseEntity.getBody().get("associationId");
             associationRepository.save(new Association(associationId, enrollmentRequest));
         }
