@@ -331,7 +331,7 @@ public class EnrollmentEndpoint {
         }
         LOG.debug(String.format("Posting association endpoint for personId %s and enrolment request %s to %s", personId, enrollmentRequest, associationURI));
 
-        ResponseEntity<Map<String, Object>> responseEntity = exchangeToHomeInstitution(enrollmentRequest, association, associationURI, HttpMethod.POST, true);
+        ResponseEntity<Map<String, Object>> responseEntity = exchangeToHomeInstitution(enrollmentRequest, association, associationURI, HttpMethod.POST, false, true);
         if (HttpStatus.CREATED.equals(responseEntity.getStatusCode())) {
             String associationId = (String) responseEntity.getBody().get("associationId");
             associationRepository.save(new Association(associationId, enrollmentRequest));
@@ -360,7 +360,7 @@ public class EnrollmentEndpoint {
         LOG.debug(String.format("Patching association endpoint for enrolment request %s to %s", enrollmentRequest, associationURI));
 
         Map<String, Object> body = EnrollmentAssociation.transform(association, enrollmentRequest);
-        return exchangeToHomeInstitution(enrollmentRequest, body, associationURI, HttpMethod.PATCH, true);
+        return exchangeToHomeInstitution(enrollmentRequest, body, associationURI, HttpMethod.PATCH, false, true);
     }
 
     /*
@@ -383,7 +383,7 @@ public class EnrollmentEndpoint {
         LOG.debug(String.format("Posting back results endpoint for personId %s and enrolment request %s to %s", personId, enrollmentRequest, resultsURI));
 
         Map<String, Object> body = EnrollmentAssociation.transform(results, enrollmentRequest);
-        return exchangeToHomeInstitution(enrollmentRequest, body, resultsURI, HttpMethod.POST, true);
+        return exchangeToHomeInstitution(enrollmentRequest, body, resultsURI, HttpMethod.POST, true,true);
     }
 
     /*
@@ -415,7 +415,7 @@ public class EnrollmentEndpoint {
         }
         LOG.debug(String.format("Getting person endpoint for enrolment request %s to %s", enrollmentRequest, personURI));
 
-        ResponseEntity<Map<String, Object>> responseEntity = exchangeToHomeInstitution(enrollmentRequest, null, personURI, HttpMethod.GET, true);
+        ResponseEntity<Map<String, Object>> responseEntity = exchangeToHomeInstitution(enrollmentRequest, null, personURI, HttpMethod.GET, true,true);
         if (responseEntity.getStatusCode().is2xxSuccessful()) {
             responseEntity.getBody().put("personId", enrollmentRequest.getEduid());
         }
@@ -435,6 +435,7 @@ public class EnrollmentEndpoint {
                                                                           Map<String, Object> body,
                                                                           String uri,
                                                                           HttpMethod httpMethod,
+                                                                          boolean returnHttpStatusOk,
                                                                           boolean retry) {
         HttpHeaders httpHeaders = getOidcAuthorizationHttpHeaders(
                 enrollmentRequest.getAccessToken(),
@@ -446,12 +447,12 @@ public class EnrollmentEndpoint {
 
             LOG.debug(String.format("Received answer from %s with status %s", uri, exchanged.getStatusCode()));
 
-            return ResponseEntity.ok().body(exchanged.getBody());
+            return returnHttpStatusOk ? ResponseEntity.ok().body(exchanged.getBody()) : exchanged;
         } catch (HttpStatusCodeException e) {
             if (retry) {
                 try {
                     EnrollmentRequest refreshedEnrollmentRequest = refreshTokens(enrollmentRequest);
-                    return exchangeToHomeInstitution(refreshedEnrollmentRequest, body, uri, httpMethod, false);
+                    return exchangeToHomeInstitution(refreshedEnrollmentRequest, body, uri, httpMethod, returnHttpStatusOk, false);
                 } catch (HttpStatusCodeException e2) {
                     return this.errorResponseEntity("Error in obtaining new accessToken with saved refreshToken for enrolment request:" + enrollmentRequest, e2);
                 }

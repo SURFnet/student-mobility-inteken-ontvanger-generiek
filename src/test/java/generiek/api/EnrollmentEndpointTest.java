@@ -687,9 +687,10 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
         String content = readFile("data/association_me.json");
 
         stubFor(post(urlPathMatching("/associations/external/me")).willReturn(aResponse()
+                .withStatus(201)
                 .withBody(content)
                 .withHeader("Content-Type", "application/json")
-                .withStatus(200)));
+        ));
 
         given()
                 .when()
@@ -700,7 +701,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                 .pathParam("personId", enrollmentRequest.getEduid())
                 .post("/associations/external/{personId}")
                 .then()
-                .statusCode(200);
+                .statusCode(201);
 
         Association association = associationRepository.findByAssociationId("1234567890").get();
         assertEquals(correlationId, association.getEnrollmentRequest().getIdentifier());
@@ -741,6 +742,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
         String bodyFromHomeInstitution = objectMapper.writeValueAsString(singletonMap("associationId", associationId));
         stubFor(post(urlPathMatching("/associations/external/me")).willReturn(aResponse()
                 .withHeader("Content-Type", "application/json")
+                .withStatus(201)
                 .withBody(bodyFromHomeInstitution)));
 
         Map<String, Object> results = objectMapper.readValue(readFile("data/results.json"), mapRef);
