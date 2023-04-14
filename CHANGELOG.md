@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.5]
+
+### Changed
+
+- Do not save associationID if enrollment is denied 
+
 ## [0.2.3]
 
 ### Changed
