@@ -2,10 +2,12 @@ package generiek.model;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.RandomStringUtils;
-import org.jetbrains.annotations.TestOnly;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
+import java.nio.charset.Charset;
 import java.util.Base64;
 import java.util.HashSet;
 
@@ -22,7 +24,7 @@ class EnrollmentRequestTest {
         enrollmentRequest.setEduid("eduID");
         enrollmentRequest.setRefreshToken("refreshToken");
         String randomString = RandomStringUtils.randomAscii(500);
-        enrollmentRequest.setHomeInstitution("uu.utrecht" + randomString);
+        enrollmentRequest.setHomeInstitution("uu+ utrecht" + randomString);
         enrollmentRequest.setPersonAuth(PersonAuthentication.HEADER.name());
         enrollmentRequest.setPersonURI("https://results.uu.university.com" + randomString);
         enrollmentRequest.setScope("https://long.scope.uri.at.somewhere" + randomString);
@@ -36,6 +38,12 @@ class EnrollmentRequestTest {
         String base64 = enrollmentRequest.serializeToBase64(objectMapper);
         //Ensure we don't max out on the query param size - which we won't for the GZIP compression
         assertTrue(base64.length() < 1024);
+
+        //Ensure URL decoding / encoding does not change the base64
+        String encoded = URLEncoder.encode(base64, Charset.defaultCharset().name());
+        assertEquals(base64, encoded);
+        String decoded = URLDecoder.decode(encoded, Charset.defaultCharset().name());
+        assertEquals(encoded, decoded);
 
         EnrollmentRequest newEnrollmentRequest = EnrollmentRequest.serializeFromBase64(objectMapper, base64);
 
@@ -53,10 +61,5 @@ class EnrollmentRequestTest {
         assertThrows(IllegalArgumentException.class, () -> EnrollmentRequest.serializeFromBase64(objectMapper, s));
     }
 
-    @Test
-    void serializeStateTest() throws IOException {
-        String s = "H4sIAAAAAAAAAH2MsQ5AQBAFf0W2xlaa6yQkan%2BgOHFxbi%2F7DoX4d1doKSeZmYsiGVpSijDMKiGdFXada4FTh8q7sNbBs8gUHR8NR6uQAN4slTTldujbrh8zIMP34O2Kb0Mtdp%2BQT8vfie4HirfhR7QAAAA%3D";
-        EnrollmentRequest enrollmentRequest = EnrollmentRequest.serializeFromBase64(objectMapper, s);
-        assertEquals("rontw-surf.osiris-link.nl", enrollmentRequest.getHomeInstitution());
-    }
+
 }

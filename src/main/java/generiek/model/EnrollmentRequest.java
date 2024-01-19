@@ -13,9 +13,6 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.Serializable;
-import java.net.URLDecoder;
-import java.net.URLEncoder;
-import java.nio.charset.Charset;
 import java.time.Instant;
 import java.util.*;
 import java.util.zip.GZIPInputStream;
@@ -91,8 +88,8 @@ public class EnrollmentRequest implements Serializable {
         GZIPOutputStream gout = new GZIPOutputStream(bos);
         gout.write(bytes);
         gout.finish();
-
-        return URLEncoder.encode(Base64.getEncoder().encodeToString(bos.toByteArray()), Charset.defaultCharset().name());
+        //Avoid decoding / encoding as URL parameter problems
+        return new String(org.apache.commons.codec.binary.Base64.encodeBase64(bos.toByteArray(), false, true));
     }
 
     public String toString() {
@@ -110,8 +107,9 @@ public class EnrollmentRequest implements Serializable {
     }
 
     @SuppressWarnings("unchecked")
-    public static EnrollmentRequest serializeFromBase64(ObjectMapper objectMapper, String base64) throws IOException {
-        byte[] decoded = Base64.getDecoder().decode(URLDecoder.decode(base64, Charset.defaultCharset().name()));
+    public static EnrollmentRequest serializeFromBase64(ObjectMapper objectMapper,
+                                                        String base64) throws IOException {
+        byte[] decoded = org.apache.commons.codec.binary.Base64.decodeBase64(base64);
         //Equal or more than 42 KB is considered a gzip bomb attack
         if (decoded.length / 1024 >= 42) {
             throw new IllegalArgumentException("GZip bomb detected");

@@ -29,7 +29,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
 import java.net.URLDecoder;
-import java.nio.charset.Charset;
 import java.security.*;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
@@ -610,7 +609,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
         MultiValueMap<String, String> params = UriComponentsBuilder.fromHttpUrl(location).build().getQueryParams();
         String scope = params.getFirst("scope");
         assertEquals("openid write", URLDecoder.decode(scope, "UTF-8"));
-        return URLDecoder.decode(params.getFirst("state"), Charset.defaultCharset().name());
+        return params.getFirst("state");
     }
 
 
@@ -630,7 +629,8 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                 .withHeader("Content-Type", "application/json")
                 .withBody(objectMapper.writeValueAsString(tokenResult))));
 
-        String location = given().redirects().follow(false)
+        String location = given()
+                .redirects().follow(false)
                 .when()
                 .queryParam("code", "123456")
                 .queryParam("state", state)
