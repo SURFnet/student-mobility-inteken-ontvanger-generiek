@@ -2,6 +2,7 @@ package generiek.model;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.jetbrains.annotations.TestOnly;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -50,5 +51,12 @@ class EnrollmentRequestTest {
     void serializeFromBase64GZipBomb() {
         String s = Base64.getEncoder().encodeToString(new byte[42 * 1024]);
         assertThrows(IllegalArgumentException.class, () -> EnrollmentRequest.serializeFromBase64(objectMapper, s));
+    }
+
+    @Test
+    void serializeStateTest() throws IOException {
+        String s = "H4sIAAAAAAAAAH2MsQ5AQBAFf0W2xlaa6yQkan%2BgOHFxbi%2F7DoX4d1doKSeZmYsiGVpSijDMKiGdFXada4FTh8q7sNbBs8gUHR8NR6uQAN4slTTldujbrh8zIMP34O2Kb0Mtdp%2BQT8vfie4HirfhR7QAAAA%3D";
+        EnrollmentRequest enrollmentRequest = EnrollmentRequest.serializeFromBase64(objectMapper, s);
+        assertEquals("rontw-surf.osiris-link.nl", enrollmentRequest.getHomeInstitution());
     }
 }
