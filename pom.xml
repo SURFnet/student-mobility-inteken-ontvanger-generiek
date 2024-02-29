@@ -10,7 +10,7 @@
     </parent>
     <groupId>org.surfnet</groupId>
     <artifactId>student-mobility-inteken-ontvanger-generiek</artifactId>
-    <version>0.2.12</version>
+    <version>0.2.13-SNAPSHOT</version>
     <name>inteken-ontvanger-generiek</name>
     <description>inteken-ontvanger-generiek</description>
 
@@ -158,7 +158,7 @@
                         <configuration>
                             <rules>
                                 <requireJavaVersion>
-                                    <version>[1.8.0-0, 1.8.0-392]</version>
+                                    <version>[1.8.0-0, 1.8.0-402]</version>
                                 </requireJavaVersion>
                             </rules>
                         </configuration>

@@ -26,3 +26,12 @@ mvn spring-boot:run
 To build and deploy (the latter requires credentials in your maven settings):
 
 `mvn clean deploy`
+
+## Run as docker comtainer
+
+To run this project as a docker container, simply download
+[docker-compose.yml](./docker/docker-compose.yml) and
+[application.yml](./docker/application.yml) to a location on your machine and
+type `docker compose up -d`.
+
+[See here for available container versions](https://github.com/SURFnet/student-mobility-inteken-ontvanger-generiek/pkgs/container/student-mobility-inteken-ontvanger-generiek%2Fintekenontvanger-generiek)

@@ -1,0 +1,11 @@
+# yamllint disable rule:line-length
+---
+version: '3.8'
+services:
+  intekenontvanger-generiek:
+    image: ghcr.io/surfnet/student-mobility-inteken-ontvanger-generiek/intekenontvanger-generiek:latest
+    volumes:
+      - ${PWD}/application.yml:/application.yml
+      - ${PWD}/database:/database
+    ports:
+      - 8092:8092
