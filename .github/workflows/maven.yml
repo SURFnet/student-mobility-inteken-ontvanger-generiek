@@ -87,6 +87,7 @@ jobs:
             latest=false
           tags: |
             type=ref,event=tag
+            type=raw,value=latest,event=tag
             type=semver,pattern={{version}},value=${{ steps.versioncheck.outputs.version }}
             type=sha
 
