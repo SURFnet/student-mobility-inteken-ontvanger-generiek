@@ -1,6 +1,6 @@
 # yamllint disable rule:line-length
 ---
-name: Build
+name: Release
 
 on:
   push:
@@ -12,6 +12,7 @@ jobs:
   build:
     permissions:
       packages: write
+      contents: write
     runs-on: ubuntu-latest
 
     steps:
