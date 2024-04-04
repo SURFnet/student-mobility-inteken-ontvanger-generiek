@@ -3,6 +3,7 @@
 All notable changes to this project will be documented in this file.
 
 ## [0.2.16]
+
 - Added support for EC JWT signing
 - extra logging for access tokens
 
