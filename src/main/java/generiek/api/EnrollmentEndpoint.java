@@ -1,6 +1,8 @@
 package generiek.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.proc.BadJOSEException;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
@@ -167,7 +169,7 @@ public class EnrollmentEndpoint {
      * Redirect after authentication. Give browser-control back to the client to call start and show progress-spinner
      */
     @GetMapping("/redirect_uri")
-    public View redirect(@RequestParam("code") String code, @RequestParam("state") String state) throws ParseException, IOException {
+    public View redirect(@RequestParam("code") String code, @RequestParam("state") String state) throws ParseException, IOException, BadJOSEException, JOSEException {
         MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
         map.add("client_id", clientId);
         map.add("client_secret", clientSecret);
