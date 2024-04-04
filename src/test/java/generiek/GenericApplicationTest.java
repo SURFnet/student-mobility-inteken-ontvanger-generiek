@@ -12,8 +12,8 @@ class GenericApplicationTest {
 
     @Test
     void main() {
-        GenericApplication.main(new String[]{"--server.port=8088"});
-        RestAssured.port = 8088;
+        GenericApplication.main(new String[]{"--server.port=8082"});
+        RestAssured.port = 8082;
         given()
                 .when()
                 .get("/internal/health")
