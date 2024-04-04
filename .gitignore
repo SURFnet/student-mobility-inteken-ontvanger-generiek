@@ -11,4 +11,4 @@ TODO.txt
 database/
 docu
 OldEnrollmentEndpoint.java
-dependency.tree
+dependency*.tree
