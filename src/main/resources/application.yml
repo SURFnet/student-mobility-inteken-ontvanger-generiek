@@ -43,6 +43,7 @@ config:
 features:
   # Do we allow to mock the different scenario's - only allow on test
   allow_playground: true
+  require_eduid: true
 
 # URL of the broker-gui to redirect back after authentication and the
 # credentials of the broker-server to check against

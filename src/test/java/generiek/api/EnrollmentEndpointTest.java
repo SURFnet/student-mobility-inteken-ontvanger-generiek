@@ -590,7 +590,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
     }
 
     @SneakyThrows
-    private String doAuthorize(String personAuth) {
+    protected String doAuthorize(String personAuth) {
         stubFor(post(urlPathMatching("/api/validate-service-registry-endpoints")).willReturn(aResponse()
                 .withHeader("Content-Type", "application/json")
                 .withBody(objectMapper.writeValueAsString(singletonMap("valid", true)))));
@@ -613,7 +613,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
     }
 
 
-    private String doToken(String state) throws NoSuchProviderException, NoSuchAlgorithmException, JOSEException, IOException {
+    private String doToken(String state) throws JOSEException, IOException {
         Map<String, String> claims = new HashMap<>();
         claims.put("family_name", "Doe");
         claims.put("given_name", "John");
@@ -782,7 +782,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
         return IOUtils.toString(new ClassPathResource(path).getInputStream());
     }
 
-    private String accessToken(Map<String, String> claims) throws JOSEException, IOException {
+    protected String accessToken(Map<String, String> claims) throws JOSEException, IOException {
         stubFor(get(urlPathMatching("/oidc/certs")).willReturn(aResponse()
                 .withHeader("Content-Type", "application/json")
                 .withBody(objectMapper.writeValueAsString(jwkSetMap))));

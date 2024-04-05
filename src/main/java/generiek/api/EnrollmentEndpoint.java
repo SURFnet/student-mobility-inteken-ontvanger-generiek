@@ -69,6 +69,7 @@ public class EnrollmentEndpoint {
     private final String brokerUrl;
     private final ServiceRegistry serviceRegistry;
     private final boolean allowPlayground;
+    private final boolean eduIDRequired;
     private final EnrollmentRepository enrollmentRepository;
     private final AssociationRepository associationRepository;
     private final ObjectMapper objectMapper;
@@ -90,6 +91,7 @@ public class EnrollmentEndpoint {
                               @Value("${backend.api_password}") String backendApiPassword,
                               @Value("${broker.url}") String brokerUrl,
                               @Value("${features.allow_playground}") boolean allowPlayground,
+                              @Value("${features.require_eduid}") boolean eduIDRequired,
                               @Value("${config.connection_timeout_millis}") int connectionTimeoutMillis,
                               @Value("${config.connection_pool_keep_alive_duration_millis}") int keepAliveDurationMillis,
                               @Value("${config.connection_pool_max_idle_connections}") int maxIdleConnections,
@@ -116,6 +118,7 @@ public class EnrollmentEndpoint {
         this.serviceRegistry = serviceRegistry;
         this.objectMapper = objectMapper;
         this.allowPlayground = allowPlayground;
+        this.eduIDRequired = eduIDRequired;
         // Otherwise, we can't use method PATCH
         OkHttpClient.Builder builder = new OkHttpClient.Builder();
         builder
@@ -200,7 +203,7 @@ public class EnrollmentEndpoint {
         givenName = URLEncoder.encode(givenName, "UTF-8");
 
         String eduid = claimsSet.getStringClaim("eduid");
-        if (!StringUtils.hasText(eduid)) {
+        if (!StringUtils.hasText(eduid) && this.eduIDRequired) {
             LOG.error("eduid is required. Check the ARP for RP:" + this.clientId);
             String redirect = String.format("%s?error=%s", brokerUrl, 419);
             return new RedirectView(redirect, false);
@@ -216,8 +219,9 @@ public class EnrollmentEndpoint {
         }
 
         LOG.debug("Redirect after authorization called for enrollment request: " + enrollmentRequest);
-
-        enrollmentRequest.setEduid(eduid);
+        if (this.eduIDRequired) {
+            enrollmentRequest.setEduid(eduid);
+        }
         enrollmentRequest.setAccessToken(accessToken);
         enrollmentRequest.setRefreshToken(refreshToken);
         enrollmentRepository.save(enrollmentRequest);
@@ -261,8 +265,12 @@ public class EnrollmentEndpoint {
         } catch (HttpStatusCodeException e) {
             return this.errorResponseEntity("Error in retrieving person for enrollmentRequest: " + enrollmentRequest, e);
         }
-        LOG.debug(String.format("Replacing personId %s with eduID %s", personMap.get("personId"), enrollmentRequest.getEduid()));
-        personMap.put("personId", enrollmentRequest.getEduid());
+        if (this.eduIDRequired) {
+            LOG.debug(String.format("Replacing personId %s with eduID %s", personMap.get("personId"), enrollmentRequest.getEduid()));
+            personMap.put("personId", enrollmentRequest.getEduid());
+        } else {
+            LOG.debug(String.format("Not replacing personId with an eduID as eduIDRequired is false", personMap.get("personId")));
+        }
         body.put("person", personMap);
 
         HttpHeaders httpHeaders = new HttpHeaders();
@@ -301,7 +309,9 @@ public class EnrollmentEndpoint {
         }
         EnrollmentRequest enrollmentRequest = enrollmentRepository.findByIdentifier(correlationId).orElseThrow(ExpiredEnrollmentRequestException::new);
         Map<String, Object> newResults = new HashMap<>(results);
-        newResults.put("personId", enrollmentRequest.getEduid());
+        if (this.eduIDRequired) {
+            newResults.put("personId", enrollmentRequest.getEduid());
+        }
         Association association;
         if (results.containsKey("associationId")) {
             association = associationRepository.findByAssociationId((String) results.get("associationId"))
