@@ -13,6 +13,11 @@ cross-institution registrations.
 - Java 8
 - Maven 3
 
+Set the JAVA_HOME property for maven (example for macOS):
+```
+export JAVA_HOME=/Library/Java/JavaVirtualMachines/adoptopenjdk-8.jdk/Contents/Home/
+```
+
 ## [Building and running](#building-and-running)
 
 ### [The student-mobility-inteken-ontvanger-generiek-server](#student-mobility-inteken-ontvanger-generiek-server)
