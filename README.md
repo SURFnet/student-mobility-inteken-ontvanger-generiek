@@ -14,7 +14,8 @@ cross-institution registrations.
 - Maven 3
 
 Set the JAVA_HOME property for maven (example for macOS):
-```
+
+```shell
 export JAVA_HOME=/Library/Java/JavaVirtualMachines/adoptopenjdk-8.jdk/Contents/Home/
 ```
 
@@ -24,15 +25,18 @@ export JAVA_HOME=/Library/Java/JavaVirtualMachines/adoptopenjdk-8.jdk/Contents/H
 
 This project uses Spring Boot and Maven. To run locally, type:
 
-```bash
+```shell
 mvn spring-boot:run
 ```
 
 To build and deploy (the latter requires credentials in your maven settings):
 
-`mvn clean deploy`
+```shell
+mvn clean deploy
+```
 
-## Run as docker comtainer
+
+## Run as docker container
 
 To run this project as a docker container, simply download
 [docker-compose.yml](./docker/docker-compose.yml) and
