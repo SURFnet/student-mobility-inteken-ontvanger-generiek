@@ -35,7 +35,6 @@ To build and deploy (the latter requires credentials in your maven settings):
 mvn clean deploy
 ```
 
-
 ## Run as docker container
 
 To run this project as a docker container, simply download
