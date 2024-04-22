@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.17]
+
+- BREAKING: When using the default file-base database, this update will require the removal of the H2 database as the new version is incompatible with the old data format.
+- Feature toggle not to requre an eduID, `require_eduid`
+
 ## [0.2.16]
 
 - Added support for EC JWT signing
