@@ -1,6 +1,6 @@
 # student-mobility-inteken-ontvanger-generiek
 
-[![Build Status](https://github.com/SURFnet/student-mobility-inteken-ontvanger-generiek/actions/workflows/maven.yml/badge.svg)](https://github.com/SURFnet/student-mobility-inteken-ontvanger-generiek/actions/workflows/maven.yml/badge.svg)
+[![Build Status](https://github.com/SURFnet/student-mobility-inteken-ontvanger-generiek/actions/workflows/build.yml/badge.svg)](https://github.com/SURFnet/student-mobility-inteken-ontvanger-generiek/actions/workflows/maven.yml/badge.svg)
 [![codecov](https://codecov.io/gh/SURFnet/student-mobility-inteken-ontvanger-generiek/branch/main/graph/badge.svg)](https://codecov.io/gh/SURFnet/student-mobility-inteken-ontvanger-generiek)
 
 Generic part of the institution hosted part of the broker for educational
