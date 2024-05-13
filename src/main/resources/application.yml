@@ -27,7 +27,7 @@ spring:
     ## Default filebased storage
     driver-class-name: org.h2.Driver
     url: jdbc:h2:file:./database/student-mobility
-    ## For Postgress use : 
+    ## For Postgress use :
     # driver-class-name: org.postgresql.Driver
     # url: jdbc:postgresql://localhost:5432/mobility
     # username: mobility_rw
