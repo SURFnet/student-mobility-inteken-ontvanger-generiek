@@ -20,14 +20,25 @@ spring:
     properties:
       hibernate:
         naming-strategy: org.hibernate.cfg.ImprovedNamingStrategy
-        # dialect: org.hibernate.dialect.PostgreSQL10Dialect
+        ## Default filebased storage
         dialect: org.hibernate.dialect.H2Dialect
+        ## For Postgress use :
+        # dialect: org.hibernate.dialect.PostgreSQL10Dialect
+        ## For mariadb use :
+        # dialect: org.hibernate.dialect.MariaDBDialect
     open-in-view: false
   datasource:
+    ## Default filebased storage
     driver-class-name: org.h2.Driver
     url: jdbc:h2:file:./database/student-mobility
+    ## For Postgress use :
     # driver-class-name: org.postgresql.Driver
     # url: jdbc:postgresql://localhost:5432/mobility
+    # username: mobility_rw
+    # password: secret
+    ## For mariadb use :
+    # driver-class-name: org.mariadb.jdbc.Driver
+    # url: jdbc:mariadb://localhost:3306/mobility
     # username: mobility_rw
     # password: secret
   flyway:
