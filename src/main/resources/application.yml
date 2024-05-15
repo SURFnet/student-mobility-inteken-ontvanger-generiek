@@ -20,8 +20,12 @@ spring:
     properties:
       hibernate:
         naming-strategy: org.hibernate.cfg.ImprovedNamingStrategy
-        # dialect: org.hibernate.dialect.PostgreSQL10Dialect
+        ## Default filebased storage
         dialect: org.hibernate.dialect.H2Dialect
+        ## For Postgress use :
+        # dialect: org.hibernate.dialect.PostgreSQL10Dialect
+        ## For mariadb use :
+        # dialect: org.hibernate.dialect.MariaDBDialect
     open-in-view: false
   datasource:
     ## Default filebased storage
