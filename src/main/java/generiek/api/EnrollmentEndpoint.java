@@ -44,10 +44,7 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.text.ParseException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -362,6 +359,19 @@ public class EnrollmentEndpoint {
     @PatchMapping("/associations/{associationId}")
     public ResponseEntity<Map<String, Object>> associationUpdate(@PathVariable("associationId") String associationId,
                                                                  @RequestBody Map<String, Object> association) {
+        return doAssociationUpdate(associationId, Optional.of(association));
+    }
+
+    /*
+     * Called by the SIS of the guest institution to inform the home institution of the status of the (pending)
+     * enrollment
+     */
+    @GetMapping("/associations/{associationId}")
+    public ResponseEntity<Map<String, Object>> associationUpdateGet(@PathVariable("associationId") String associationId) {
+        return doAssociationUpdate(associationId, Optional.empty());
+    }
+
+    private ResponseEntity<Map<String, Object>> doAssociationUpdate(String associationId, Optional<Map<String, Object>> association) {
         EnrollmentRequest enrollmentRequest = associationRepository.findByAssociationId(associationId)
                 .orElseThrow(ExpiredEnrollmentRequestException::new).getEnrollmentRequest();
 
@@ -375,8 +385,9 @@ public class EnrollmentEndpoint {
         }
         LOG.debug(String.format("Patching association endpoint for enrolment request %s to %s", enrollmentRequest, associationURI));
 
-        Map<String, Object> body = EnrollmentAssociation.transform(association, enrollmentRequest);
-        return exchangeToHomeInstitution(enrollmentRequest, body, associationURI, HttpMethod.PATCH, false, true);
+        Map<String, Object> body = association.map(ass -> EnrollmentAssociation.transform(ass, enrollmentRequest)).orElse(null) ;
+        HttpMethod httpMethod = association.map(ass -> HttpMethod.PATCH).orElse(HttpMethod.GET) ;
+        return exchangeToHomeInstitution(enrollmentRequest, body, associationURI, httpMethod, false, true);
     }
 
     /*

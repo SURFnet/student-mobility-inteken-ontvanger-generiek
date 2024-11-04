@@ -299,8 +299,6 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                 .patch("/associations/{associationId}")
                 .then()
                 .statusCode(403);
-
-
     }
 
     @Test
@@ -728,6 +726,20 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                 .body(new HashMap<>())
                 .pathParam("associationId", associationId)
                 .patch("/associations/{associationId}")
+                .then()
+                .statusCode(200);
+        //Alternative GET
+        stubFor(get(urlPathMatching("/associations/" + associationId)).willReturn(aResponse()
+                .withHeader("Content-Type", "application/json")
+                .withStatus(200)));
+
+        given()
+                .when()
+                .contentType(ContentType.JSON)
+                .accept(ContentType.JSON)
+                .auth().basic("sis", "secret")
+                .pathParam("associationId", associationId)
+                .get("/associations/{associationId}")
                 .then()
                 .statusCode(200);
     }
