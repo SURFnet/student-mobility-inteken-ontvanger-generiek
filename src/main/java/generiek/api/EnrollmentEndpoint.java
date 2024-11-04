@@ -269,7 +269,11 @@ public class EnrollmentEndpoint {
             LOG.debug(String.format("Replacing personId %s with eduID %s", personMap.get("personId"), enrollmentRequest.getEduid()));
             personMap.put("personId", enrollmentRequest.getEduid());
         } else {
-            LOG.debug(String.format("Not replacing personId with an eduID as eduIDRequired is false", personMap.get("personId")));
+            String personId = (String) personMap.get("personId");
+            LOG.debug(String.format("Updating enrollmentRequest with personId %s as eduIDRequired is false", personId));
+            //TODO quick-fix, proper solution is to make the decision explicit
+            enrollmentRequest.setEduid(personId);
+            this.enrollmentRepository.save(enrollmentRequest);
         }
         body.put("person", personMap);
 
