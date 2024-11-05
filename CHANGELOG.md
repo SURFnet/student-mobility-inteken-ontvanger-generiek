@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.20]
+
+- Add prompt=consent when requesting offline_access
+
 ## [0.2.19]
 
 - Allow using without eduID
