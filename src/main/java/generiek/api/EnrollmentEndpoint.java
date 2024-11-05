@@ -575,6 +575,11 @@ public class EnrollmentEndpoint {
         params.put("response_type", "code");
         params.put("redirect_uri", redirectUri);
         params.put("state", base64Enrollment);
+        //When working outside of Openconnext, the 'offline_access' is added for refresh tokens,
+        // and 'prompt=consent' should be added
+        if (enrollmentRequest.getScope().contains("offline_access")) {
+            params.put("prompt", "consent");
+        }
 
         UriComponentsBuilder builder = UriComponentsBuilder.fromUri(authorizationUri);
         params.forEach(builder::queryParam);
