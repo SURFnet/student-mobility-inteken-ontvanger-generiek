@@ -49,6 +49,35 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+public class RestTemplateLoggingInterceptor implements ClientHttpRequestInterceptor {
+    @Override
+    public ClientHttpResponse intercept(HttpRequest request, byte[] body, ClientHttpRequestExecution execution) throws IOException {
+        // Log request details
+        System.out.println("Request URI: " + request.getURI());
+        System.out.println("Request Headers: " + request.getHeaders());
+        System.out.println("Request Method: " + request.getMethod());
+        System.out.println("Request Body: " + new String(body, StandardCharsets.UTF_8));
+
+        // Execute the request
+        ClientHttpResponse response = execution.execute(request, body);
+
+        // Log response details
+        System.out.println("Response Status Code: " + response.getStatusCode());
+        System.out.println("Response Headers: " + response.getHeaders());
+        
+        // If you want to log the response body
+        // Note: To log the body, you may need to buffer it first
+        InputStream responseBody = response.getBody();
+        if (responseBody != null) {
+            String bodyAsString = new BufferedReader(new InputStreamReader(responseBody))
+                    .lines().collect(Collectors.joining("\n"));
+            System.out.println("Response Body: " + bodyAsString);
+        }
+        
+        return response;
+    }
+}
+
 @RestController
 public class EnrollmentEndpoint {
 
@@ -129,6 +158,8 @@ public class EnrollmentEndpoint {
             request.getHeaders().add("Accept-Language", LanguageFilter.language.get());
             return execution.execute(request, body);
         }));
+
+        this.restTemplate.getInterceptors().add(new RestTemplateLoggingInterceptor());
     }
 
     @InitBinder
