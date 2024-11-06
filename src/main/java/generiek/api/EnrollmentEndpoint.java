@@ -24,6 +24,9 @@ import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
+import org.springframework.http.client.BufferingClientHttpRequestFactory;
+import org.springframework.http.client.ClientHttpRequestFactory;
+import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.http.client.OkHttp3ClientHttpRequestFactory;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.LinkedMultiValueMap;
@@ -49,34 +52,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-private class RestTemplateLoggingInterceptor implements ClientHttpRequestInterceptor {
-    @Override
-    public ClientHttpResponse intercept(HttpRequest request, byte[] body, ClientHttpRequestExecution execution) throws IOException {
-        // Log request details
-        System.out.println("Request URI: " + request.getURI());
-        System.out.println("Request Headers: " + request.getHeaders());
-        System.out.println("Request Method: " + request.getMethod());
-        System.out.println("Request Body: " + new String(body, StandardCharsets.UTF_8));
-
-        // Execute the request
-        ClientHttpResponse response = execution.execute(request, body);
-
-        // Log response details
-        System.out.println("Response Status Code: " + response.getStatusCode());
-        System.out.println("Response Headers: " + response.getHeaders());
-        
-        // If you want to log the response body
-        // Note: To log the body, you may need to buffer it first
-        InputStream responseBody = response.getBody();
-        if (responseBody != null) {
-            String bodyAsString = new BufferedReader(new InputStreamReader(responseBody))
-                    .lines().collect(Collectors.joining("\n"));
-            System.out.println("Response Body: " + bodyAsString);
-        }
-        
-        return response;
-    }
-}
 
 @RestController
 public class EnrollmentEndpoint {
@@ -153,12 +128,16 @@ public class EnrollmentEndpoint {
                 .retryOnConnectionFailure(true)
                 .connectionPool(new ConnectionPool(maxIdleConnections, keepAliveDurationMillis, TimeUnit.MILLISECONDS));
 
-        this.restTemplate = new RestTemplate(new OkHttp3ClientHttpRequestFactory(builder.build()));
-        this.restTemplate.setInterceptors(Collections.singletonList((request, body, execution) -> {
+        ClientHttpRequestFactory requestFactory = new OkHttp3ClientHttpRequestFactory(builder.build());
+        if (LOG.isDebugEnabled()) {
+            //This allows us to read the response body twice, which has a performance overhead
+            requestFactory = new BufferingClientHttpRequestFactory(requestFactory);
+        }
+        this.restTemplate = new RestTemplate(requestFactory);
+        this.restTemplate.getInterceptors().add((request, body, execution) -> {
             request.getHeaders().add("Accept-Language", LanguageFilter.language.get());
             return execution.execute(request, body);
-        }));
-
+        });
         this.restTemplate.getInterceptors().add(new RestTemplateLoggingInterceptor());
     }
 
