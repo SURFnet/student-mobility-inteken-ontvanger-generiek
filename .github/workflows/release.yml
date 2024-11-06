@@ -128,3 +128,4 @@ jobs:
           asset_path: ./target/student-mobility-inteken-ontvanger-generiek-${{ steps.versioncheck.outputs.version }}.jar
           asset_name: student-mobility-inteken-ontvanger-generiek-${{ steps.versioncheck.outputs.version }}.jar
           asset_content_type: application/java-archive
+        if: github.event_name != 'workflow_dispatch'
