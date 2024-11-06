@@ -136,6 +136,11 @@ public class EnrollmentEndpoint {
         this.restTemplate = new RestTemplate(requestFactory);
         this.restTemplate.getInterceptors().add((request, body, execution) -> {
             request.getHeaders().add("Accept-Language", LanguageFilter.language.get());
+            //Bugfix for too strict DefaultBearerTokenResolver which does not ignore CHARSET
+            List<String> contentType = request.getHeaders().get("Content-Type");
+            if (!CollectionUtils.isEmpty(contentType) && contentType.getFirst().startsWith("application/x-www-form-urlencoded")) {
+                request.getHeaders().set("Content-Type", "application/x-www-form-urlencoded");
+            }
             return execution.execute(request, body);
         });
         this.restTemplate.getInterceptors().add(new RestTemplateLoggingInterceptor());
