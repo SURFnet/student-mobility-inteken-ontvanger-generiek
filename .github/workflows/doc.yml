@@ -10,9 +10,9 @@ jobs:
     name: Lint documentation
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Lint all md files
-        uses: nosborn/github-action-markdown-cli@v2.0.0
+        uses: nosborn/github-action-markdown-cli@v3.4.0
         with:
           files: .
       - name: Lint yaml files

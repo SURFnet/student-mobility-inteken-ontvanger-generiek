@@ -93,7 +93,7 @@ jobs:
             type=sha
 
       - name: Build and push the docker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: docker/Dockerfile
@@ -103,7 +103,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
 
       - name: Codecov
-        uses: codecov/codecov-action@v3.1.1
+        uses: codecov/codecov-action@v5.4.0
 
       - name: Create release
         uses: actions/create-release@v1
