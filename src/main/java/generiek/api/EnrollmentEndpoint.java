@@ -304,7 +304,7 @@ public class EnrollmentEndpoint {
                 LOG.error(String.format("Error in registration results %s for enrollmentRequest %s", copy, enrollmentRequest));
                 return ResponseEntity.ok(copy);
             }
-            return results;
+            return ResponseEntity.status(code).body(results.getBody());
         } catch (HttpStatusCodeException e) {
             return this.errorResponseEntity("Error in registration results for enrollmentRequest: " + enrollmentRequest, e);
         }
