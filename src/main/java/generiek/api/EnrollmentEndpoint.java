@@ -26,7 +26,6 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.http.client.BufferingClientHttpRequestFactory;
 import org.springframework.http.client.ClientHttpRequestFactory;
-import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.http.client.OkHttp3ClientHttpRequestFactory;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.LinkedMultiValueMap;
@@ -364,7 +363,7 @@ public class EnrollmentEndpoint {
             String associationId = (String) responseEntity.getBody().get("associationId");
             associationRepository.save(new Association(associationId, enrollmentRequest));
         }
-        return responseEntity;
+        return ResponseEntity.status(responseEntity.getStatusCode()).body(responseEntity.getBody());
     }
 
     /*
@@ -400,8 +399,8 @@ public class EnrollmentEndpoint {
         }
         LOG.debug(String.format("Patching association endpoint for enrolment request %s to %s", enrollmentRequest, associationURI));
 
-        Map<String, Object> body = association.map(ass -> EnrollmentAssociation.transform(ass, enrollmentRequest)).orElse(null) ;
-        HttpMethod httpMethod = association.map(ass -> HttpMethod.PATCH).orElse(HttpMethod.GET) ;
+        Map<String, Object> body = association.map(ass -> EnrollmentAssociation.transform(ass, enrollmentRequest)).orElse(null);
+        HttpMethod httpMethod = association.map(ass -> HttpMethod.PATCH).orElse(HttpMethod.GET);
         return exchangeToHomeInstitution(enrollmentRequest, body, associationURI, httpMethod, false, true);
     }
 
@@ -425,7 +424,7 @@ public class EnrollmentEndpoint {
         LOG.debug(String.format("Posting back results endpoint for personId %s and enrolment request %s to %s", personId, enrollmentRequest, resultsURI));
 
         Map<String, Object> body = EnrollmentAssociation.transform(results, enrollmentRequest);
-        return exchangeToHomeInstitution(enrollmentRequest, body, resultsURI, HttpMethod.POST, true,true);
+        return exchangeToHomeInstitution(enrollmentRequest, body, resultsURI, HttpMethod.POST, true, true);
     }
 
     /*
@@ -457,11 +456,11 @@ public class EnrollmentEndpoint {
         }
         LOG.debug(String.format("Getting person endpoint for enrolment request %s to %s", enrollmentRequest, personURI));
 
-        ResponseEntity<Map<String, Object>> responseEntity = exchangeToHomeInstitution(enrollmentRequest, null, personURI, HttpMethod.GET, true,true);
+        ResponseEntity<Map<String, Object>> responseEntity = exchangeToHomeInstitution(enrollmentRequest, null, personURI, HttpMethod.GET, true, true);
         if (responseEntity.getStatusCode().is2xxSuccessful()) {
             responseEntity.getBody().put("personId", enrollmentRequest.getEduid());
         }
-        return responseEntity;
+        return ResponseEntity.status(responseEntity.getStatusCode()).body(responseEntity.getBody());
     }
 
     private EnrollmentRequest getEnrollmentRequest(String personId) {
@@ -489,7 +488,8 @@ public class EnrollmentEndpoint {
 
             LOG.debug(String.format("Received answer from %s with status %s", uri, exchanged.getStatusCode()));
 
-            return returnHttpStatusOk ? ResponseEntity.ok().body(exchanged.getBody()) : exchanged;
+            return ResponseEntity.status(returnHttpStatusOk ? HttpStatus.OK : exchanged.getStatusCode())
+                    .body(exchanged.getBody());
         } catch (HttpStatusCodeException e) {
             if (retry) {
                 try {
