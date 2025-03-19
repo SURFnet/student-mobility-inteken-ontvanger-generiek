@@ -10,7 +10,7 @@
     </parent>
     <groupId>org.surfnet</groupId>
     <artifactId>student-mobility-inteken-ontvanger-generiek</artifactId>
-    <version>0.3.1-SNAPSHOT</version>
+    <version>0.3.1</version>
     <name>inteken-ontvanger-generiek</name>
     <description>inteken-ontvanger-generiek</description>
     <properties>
