@@ -2,7 +2,7 @@
 logging:
   level:
     root: INFO
-    generiek: DEBUG
+    generiek: INFO
 
 server:
   port: 8092
