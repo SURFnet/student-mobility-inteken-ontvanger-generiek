@@ -29,7 +29,7 @@ updates:
       - "/**"
     schedule:
       interval: "daily"
-    open-pull-requests-limit: 25
+    open-pull-requests-limit: 0
     groups:
       frontends-prod:
         applies-to: version-updates
@@ -49,7 +49,7 @@ updates:
       - "/**"
     schedule:
       interval: "daily"
-    open-pull-requests-limit: 25
+    open-pull-requests-limit: 0
     groups:
       backend-prod:
         applies-to: version-updates
