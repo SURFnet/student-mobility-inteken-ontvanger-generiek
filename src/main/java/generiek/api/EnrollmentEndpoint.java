@@ -580,11 +580,14 @@ public class EnrollmentEndpoint {
         List<ClaimsSetRequest.Entry> entries = Stream.of(
                 "family_name",
                 "given_name",
-                "eduid"
-        ).map(ClaimsSetRequest.Entry::new).collect(Collectors.toList());
+                "eduid")
+                .filter(claimValue -> this.eduIDRequired || !claimValue.equals("eduid"))
+                .map(ClaimsSetRequest.Entry::new)
+                .toList();
         params.put("claims", new OIDCClaimsRequest().withIDTokenClaimsRequest(new ClaimsSetRequest(entries)).toJSONString());
-
-        params.put("acr_values", acr);
+        if (!"noop".equalsIgnoreCase(acr)) {
+            params.put("acr_values", acr);
+        }
         params.put("scope", "openid " + enrollmentRequest.getScope());
         params.put("client_id", clientId);
         params.put("response_type", "code");

@@ -77,6 +77,7 @@ backend:
   api_password: secret
 
 oidc:
+  # Use noop to not set the ACR parameter
   acr-context-class-ref: https://eduid.nl/trust/affiliation-student
   client-id: student.mobility.rp.localhost
   client-secret: secret
