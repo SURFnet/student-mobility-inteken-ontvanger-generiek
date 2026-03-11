@@ -2,6 +2,7 @@ package generiek.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -22,6 +23,7 @@ import java.util.zip.GZIPOutputStream;
 @NoArgsConstructor
 @Getter
 @Setter
+@Schema(description = "Information required to initiate an enrollment request between institutions")
 public class EnrollmentRequest implements Serializable {
 
     @Id
@@ -29,15 +31,23 @@ public class EnrollmentRequest implements Serializable {
     private Long id;
 
     @Column
+    @Schema(description = "The unique identifier (Correlation ID) for this request",
+            example = "550e8400-e29b-41d4-a716-446655440000")
     private String identifier;
 
     @Column(name = "person_uri")
+    @Schema(description = "The URI of the person at the home institution",
+            example = "https://home.inst.nl/api/persons/123", required = true)
     private String personURI;
 
     @Column(name = "home_institution")
+    @Schema(description = "The home institution identifier",
+            example = "university-of-applied-sciences", required = true)
     private String homeInstitution;
 
     @Column(name = "person_auth")
+    @Schema(description = "The authentication method used for the person URI",
+            allowableValues = {"HEADER", "FORM"}, example = "HEADER")
     private String personAuth;
 
     @OneToMany(mappedBy = "enrollmentRequest", orphanRemoval = true, fetch = FetchType.EAGER)
@@ -54,6 +64,8 @@ public class EnrollmentRequest implements Serializable {
     private String refreshToken;
 
     @Column
+    @Schema(description = "The OIDC scope requested for authorization",
+            example = "openid profile email", required = true)
     private String scope;
 
     @Column
