@@ -1,3 +1,4 @@
+---
 name: Generate and Deploy Swagger UI
 
 on:
@@ -30,7 +31,7 @@ jobs:
         uses: Legion2/swagger-ui-action@v1
         with:
           output: swagger-ui
-          spec-file: target/openapi.json 
+          spec-file: target/openapi.json
           version: 5.x
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
