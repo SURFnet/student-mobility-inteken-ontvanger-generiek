@@ -16,6 +16,10 @@ import generiek.model.PersonAuthentication;
 import generiek.ooapi.EnrollmentAssociation;
 import generiek.repository.AssociationRepository;
 import generiek.repository.EnrollmentRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.SneakyThrows;
 import okhttp3.ConnectionPool;
 import okhttp3.OkHttpClient;
@@ -53,6 +57,7 @@ import java.util.stream.Stream;
 
 
 @RestController
+@Tag(name = "Enrollment", description = "Endpoints for managing the student enrollment lifecycle")
 public class EnrollmentEndpoint {
 
     private static final Log LOG = LogFactory.getLog(EnrollmentEndpoint.class);
@@ -154,6 +159,12 @@ public class EnrollmentEndpoint {
     /*
      * Endpoint called by the student-mobility-broker form submit
      */
+    @Operation(summary = "Initiate Enrollment",
+            description = "Receives the enrollment request from the broker and redirects the student to the OIDC provider.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "302", description = "Redirect to authorization URI"),
+            @ApiResponse(responseCode = "412", description = "Invalid enrollment request (validation failed)")
+    })
     @PostMapping(value = "/api/enrollment", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
     public View enrollment(@ModelAttribute EnrollmentRequest enrollmentRequest) throws IOException {
         LOG.debug("Received authorization for enrollment request: " + enrollmentRequest);
@@ -258,6 +269,8 @@ public class EnrollmentEndpoint {
     /*
      * Start the actual enrollment based on the data returned from the 'me' endpoint
      */
+    @Operation(summary = "Start Registration",
+            description = "Triggers the actual registration at the guest institution using the student's data.")
     @PostMapping("/api/start")
     public ResponseEntity<Map<String, Object>> start(
             @RequestHeader("X-Correlation-ID") String correlationId,
