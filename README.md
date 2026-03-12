@@ -43,3 +43,7 @@ To run this project as a docker container, simply download
 type `docker compose up -d`.
 
 [See here for available container versions](https://github.com/SURFnet/student-mobility-inteken-ontvanger-generiek/pkgs/container/student-mobility-inteken-ontvanger-generiek%2Fintekenontvanger-generiek)
+
+## API
+
+[All endpoints are described here](https://surfnet.github.io/student-mobility-inteken-ontvanger-generiek/)
