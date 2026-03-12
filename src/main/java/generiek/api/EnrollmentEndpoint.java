@@ -17,6 +17,8 @@ import generiek.ooapi.EnrollmentAssociation;
 import generiek.repository.AssociationRepository;
 import generiek.repository.EnrollmentRepository;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -390,6 +392,32 @@ public class EnrollmentEndpoint {
      */
     @Operation(summary = "Proxy associations update",
             description = "Called by the SIS of the guest institution to inform the home institution of the status of the (pending) enrollment.")
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(
+            description = "The association fields to update, including result data.",
+            required = true,
+            content = @Content(
+                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                    examples = @ExampleObject(
+                            name = "OOAPI v4 Patch Association Example",
+                            summary = "Updating remote state and adding results",
+                            value = "{\n" +
+                                    "  \"remoteState\": \"associated\",\n" +
+                                    "  \"result\": {\n" +
+                                    "    \"state\": \"completed\",\n" +
+                                    "    \"pass\": \"passed\",\n" +
+                                    "    \"comment\": \"string\",\n" +
+                                    "    \"score\": \"9\",\n" +
+                                    "    \"resultDate\": \"2020-09-28\",\n" +
+                                    "    \"weight\": 100\n" +
+                                    "  }\n" +
+                                    "}"
+                    )
+            )
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Association successfully updated"),
+            @ApiResponse(responseCode = "404", description = "Association not found")
+    })
     @PatchMapping("/associations/{associationId}")
     public ResponseEntity<Map<String, Object>> associationUpdate(@PathVariable("associationId") String associationId,
                                                                  @RequestBody Map<String, Object> association) {
@@ -402,6 +430,36 @@ public class EnrollmentEndpoint {
      */
     @Operation(summary = "Proxy associations request",
             description = "Called by the SIS of the guest institution to query the home institution on the status of the (pending) enrollment.")
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Successful response with association details",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            examples = @ExampleObject(
+                                    name = "OOAPI v4 Association Example",
+                                    summary = "A standard OOAPI v4 Association with results",
+                                    value = "{\n" +
+                                            "  \"associationId\": \"123e4567-e89b-12d3-a456-426614174000\",\n" +
+                                            "  \"associationType\": \"componentOfferingAssociation\",\n" +
+                                            "  \"role\": \"student\",\n" +
+                                            "  \"state\": \"associated\",\n" +
+                                            "  \"remoteState\": \"associated\",\n" +
+                                            "  \"person\": \"05035972-0619-4d0b-8a09-7bdb6eee5e6d\",\n" +
+                                            "  \"offering\": \"811aede5-3f86-4ee8-bd58-925df0b0509d\",\n" +
+                                            "  \"result\": {\n" +
+                                            "    \"state\": \"completed\",\n" +
+                                            "    \"pass\": \"passed\",\n" +
+                                            "    \"score\": \"9\",\n" +
+                                            "    \"resultDate\": \"2020-09-28\",\n" +
+                                            "    \"weight\": 100\n" +
+                                            "  }\n" +
+                                            "}"
+                            )
+                    )
+            ),
+            @ApiResponse(responseCode = "404", description = "Association not found")
+    })
     @GetMapping("/associations/{associationId}")
     public ResponseEntity<Map<String, Object>> associationUpdateGet(@PathVariable("associationId") String associationId) {
         return doAssociationUpdate(associationId, Optional.empty());
@@ -470,6 +528,56 @@ public class EnrollmentEndpoint {
      */
     @Operation(summary = "Proxy person request",
             description = "Called by the SIS of the guest institution to get the person information. Used for checking is the person is still active.")
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Successful response with person details",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            examples = @ExampleObject(
+                                    name = "OOAPI v4 Person Example",
+                                    summary = "A standard OOAPI v4 Person response",
+                                    value = "{\n" +
+                                            "  \"personId\": \"123e4567-e89b-12d3-a456-426614174000\",\n" +
+                                            "  \"primaryCode\": {\n" +
+                                            "    \"codeType\": \"identifier\",\n" +
+                                            "    \"code\": \"1234qwe12\"\n" +
+                                            "  },\n" +
+                                            "  \"givenName\": \"Maartje\",\n" +
+                                            "  \"surnamePrefix\": \"van\",\n" +
+                                            "  \"surname\": \"Damme\",\n" +
+                                            "  \"displayName\": \"Maartje van Damme\",\n" +
+                                            "  \"initials\": \"MCW\",\n" +
+                                            "  \"activeEnrollment\": false,\n" +
+                                            "  \"dateOfBirth\": \"2003-09-30\",\n" +
+                                            "  \"cityOfBirth\": \"Utrecht\",\n" +
+                                            "  \"countryOfBirth\": \"NL\",\n" +
+                                            "  \"nationality\": \"Dutch\",\n" +
+                                            "  \"dateOfNationality\": \"2003-09-30\",\n" +
+                                            "  \"affiliations\": [ \"student\" ],\n" +
+                                            "  \"mail\": \"vandamme.mcw@universiteitvanharderwijk.nl\",\n" +
+                                            "  \"secondaryMail\": \"poekie@xyz.nl\",\n" +
+                                            "  \"telephoneNumber\": \"+31 123 456 789\",\n" +
+                                            "  \"mobileNumber\": \"+31 612 345 678\",\n" +
+                                            "  \"photoSocial\": \"https://upload.wikimedia.org/wikipedia/commons/thumb/d/d5/Placeholder_female_superhero_c.png/203px-Placeholder_female_superhero_c.png\",\n" +
+                                            "  \"photoOfficial\": \"https://upload.wikimedia.org/wikipedia/commons/6/66/Johannes_Vermeer_%281632-1675%29_-_The_Girl_With_The_Pearl_Earring_%281665%29.jpg\",\n" +
+                                            "  \"gender\": \"F\",\n" +
+                                            "  \"titlePrefix\": \"drs\",\n" +
+                                            "  \"titleSuffix\": \"BSc\",\n" +
+                                            "  \"address\": {\n" +
+                                            "    \"addressType\": \"postal\",\n" +
+                                            "    \"street\": \"Moreelsepark\",\n" +
+                                            "    \"streetNumber\": \"48\",\n" +
+                                            "    \"postalCode\": \"3511 EP\",\n" +
+                                            "    \"city\": \"Utrecht\",\n" +
+                                            "    \"countryCode\": \"NL\"\n" +
+                                            "  }\n" +
+                                            "}"
+                            )
+                    )
+            ),
+            @ApiResponse(responseCode = "404", description = "Person not found")
+    })
     @GetMapping("/person/{personId}")
     public ResponseEntity<Map<String, Object>> person(@PathVariable("personId") String personId) {
         EnrollmentRequest enrollmentRequest = getEnrollmentRequest(personId);
