@@ -193,6 +193,8 @@ public class EnrollmentEndpoint {
     /*
      * Redirect after authentication. Give browser-control back to the client to call start and show progress-spinner
      */
+    @Operation(summary = "Redirect after authentication",
+            description = "Give browser-control back to the client to call start and show progress-spinne.")
     @GetMapping("/redirect_uri")
     public View redirect(@RequestParam("code") String code, @RequestParam("state") String state) throws ParseException, IOException, BadJOSEException, JOSEException {
         MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
@@ -329,6 +331,8 @@ public class EnrollmentEndpoint {
     /*
      * Called by the Broker on behalf of the test user
      */
+    @Operation(summary = "Test results",
+            description = "Called by the Broker on behalf of the test user.")
     @PostMapping("/api/play-results")
     public ResponseEntity<Map<String, Object>> playResults(@RequestHeader("X-Correlation-ID") String correlationId,
                                                            @RequestBody Map<String, Object> results) {
@@ -353,9 +357,10 @@ public class EnrollmentEndpoint {
     }
 
     /*
-     * Called by the SIS of the guest institution to inform the home institution of the status of the (pending)
-     * enrollment
+     * Called by the SIS of the guest institution to inform the home institution of the new enrollment
      */
+    @Operation(summary = "Proxy person information request",
+            description = "Called by the SIS of the guest institution to inform the home institution of the new enrollment.")
     @PostMapping("/associations/external/{personId}")
     public ResponseEntity<Map<String, Object>> associate(@PathVariable("personId") String personId,
                                                          @RequestBody Map<String, Object> association) {
@@ -383,6 +388,8 @@ public class EnrollmentEndpoint {
      * Called by the SIS of the guest institution to inform the home institution of the status of the (pending)
      * enrollment
      */
+    @Operation(summary = "Proxy associations update",
+            description = "Called by the SIS of the guest institution to inform the home institution of the status of the (pending) enrollment.")
     @PatchMapping("/associations/{associationId}")
     public ResponseEntity<Map<String, Object>> associationUpdate(@PathVariable("associationId") String associationId,
                                                                  @RequestBody Map<String, Object> association) {
@@ -390,9 +397,11 @@ public class EnrollmentEndpoint {
     }
 
     /*
-     * Called by the SIS of the guest institution to inform the home institution of the status of the (pending)
+     * Called by the SIS of the guest institution to query the home institution on the status of the (pending)
      * enrollment
      */
+    @Operation(summary = "Proxy associations request",
+            description = "Called by the SIS of the guest institution to query the home institution on the status of the (pending) enrollment.")
     @GetMapping("/associations/{associationId}")
     public ResponseEntity<Map<String, Object>> associationUpdateGet(@PathVariable("associationId") String associationId) {
         return doAssociationUpdate(associationId, Optional.empty());
@@ -421,6 +430,8 @@ public class EnrollmentEndpoint {
      * Called by the SIS of the guest institution to report back results that need to be sent with oauth secured
      * to the home institution. V4 version for backward compatibility.
      */
+    @Operation(summary = "Proxy result",
+            description = "Called by the SIS of the guest institution to send the result to the home institution.")
     @PostMapping("/api/results")
     public ResponseEntity<Map<String, Object>> results(@RequestBody Map<String, Object> results) {
         String personId = (String) results.get("personId");
@@ -443,6 +454,8 @@ public class EnrollmentEndpoint {
     /*
      * Called by the playground
      */
+    @Operation(summary = "Playground person information",
+            description = "Used by the broker's playground.")
     @GetMapping("/api/me")
     public ResponseEntity<Map<String, Object>> me(@RequestHeader("X-Correlation-ID") String correlationId) {
         if (!allowPlayground) {
@@ -455,6 +468,8 @@ public class EnrollmentEndpoint {
     /*
      * Called by the SIS of the guest institution to validate the status of a guest-user
      */
+    @Operation(summary = "Proxy person request",
+            description = "Called by the SIS of the guest institution to get the person information. Used for checking is the person is still active.")
     @GetMapping("/person/{personId}")
     public ResponseEntity<Map<String, Object>> person(@PathVariable("personId") String personId) {
         EnrollmentRequest enrollmentRequest = getEnrollmentRequest(personId);
