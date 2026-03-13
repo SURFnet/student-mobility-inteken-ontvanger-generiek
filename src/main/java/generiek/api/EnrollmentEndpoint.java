@@ -304,8 +304,52 @@ public class EnrollmentEndpoint {
         )
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Enrollment process initiated successfully"),
-        @ApiResponse(responseCode = "401", description = "Invalid or expired correlation ID")
+        @ApiResponse(
+            responseCode = "200", 
+            description = "Enrollment status (Success or Handled Error)",
+            content = @Content(
+                mediaType = MediaType.APPLICATION_JSON_VALUE,
+                examples = {
+                    @ExampleObject(
+                        name = "Success Response",
+                        summary = "Enrollment successfully initiated",
+                        value = "{\n" +
+                                "  \"result\": \"ok\",\n" +
+                                "  \"code\": 200,\n" +
+                                "  \"message\": \"Your enrollment request has been received.\",\n" +
+                                "  \"oo-api-offering-id\": \"123e4567-e89b-12d3-a456-134564174000\",\n" +
+                                "  \"redirect\": \"https://optional.redirect/for-extra-information\"\n" +
+                                "}"
+                    ),
+                    @ExampleObject(
+                        name = "Handled Backend Error",
+                        summary = "Business error from SIS with support reference",
+                        value = "{\n" +
+                                "  \"result\": \"error\",\n" +
+                                "  \"code\": 400,\n" +
+                                "  \"message\": \"Student already registered for this component.\",\n" +
+                                "  \"reference\": \"REQ-af82-238d-1192\",\n" +
+                                "  \"oo-api-offering-id\": \"123e4567-e89b-12d3-a456-134564174000\"\n" +
+                                "}"
+                    )
+                }
+            )
+        ),
+        @ApiResponse(
+            responseCode = "500", 
+            description = "Technical connection failure",
+            content = @Content(
+                mediaType = MediaType.APPLICATION_JSON_VALUE,
+                examples = @ExampleObject(
+                    name = "Connection Exception",
+                    summary = "Exception when communicating with the backend SIS",
+                    value = "{\n" +
+                            "  \"message\": \"Error in registration results for enrollmentRequest: ...\",\n" +
+                            "  \"error\": \"Internal Server Error\"\n" +
+                            "}"
+                )
+            )
+        )
     })
     @PostMapping("/api/start")
     public ResponseEntity<Map<String, Object>> start(
