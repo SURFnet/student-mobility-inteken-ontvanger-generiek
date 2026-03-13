@@ -275,6 +275,38 @@ public class EnrollmentEndpoint {
      */
     @Operation(summary = "Start Registration",
             description = "Triggers the actual registration at the guest institution using the student's data.")
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(
+        description = "The OOAPI v4 Offering object representing the course or component the student is enrolling in.",
+        required = true,
+        content = @Content(
+            mediaType = MediaType.APPLICATION_JSON_VALUE,
+            examples = @ExampleObject(
+                name = "OOAPI v4 Offering Example",
+                summary = "A comprehensive OOAPI v4 Offering example",
+                value = "{\n" +
+                        "  \"offeringId\": \"123e4567-e89b-12d3-a456-134564174000\",\n" +
+                        "  \"offeringType\": \"component\",\n" +
+                        "  \"academicSession\": \"937983ad-cc0f-45a6-95ca-a8f60b7cf125\",\n" +
+                        "  \"name\": [{ \"language\": \"en-GB\", \"value\": \"Final written test for INFOMQNM\" }],\n" +
+                        "  \"abbreviation\": \"Test-INFOMQNM-20FS\",\n" +
+                        "  \"description\": [{ \"language\": \"en-GB\", \"value\": \"Research methods and statistics...\" }],\n" +
+                        "  \"teachingLanguage\": \"nld\",\n" +
+                        "  \"modeOfDelivery\": [ \"situated\" ],\n" +
+                        "  \"startDate\": \"2019-08-21\",\n" +
+                        "  \"endDate\": \"2023-06-15\",\n" +
+                        "  \"enrollStartDate\": \"2019-05-01\",\n" +
+                        "  \"enrollEndDate\": \"2019-08-01\",\n" +
+                        "  \"resultExpected\": true,\n" +
+                        "  \"resultValueType\": \"1-10\",\n" +
+                        "  \"organization\": \"452c1a86-a0af-475b-b03f-724878b0f387\"\n" +
+                        "}"
+            )
+        )
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Enrollment process initiated successfully"),
+        @ApiResponse(responseCode = "401", description = "Invalid or expired correlation ID")
+    })
     @PostMapping("/api/start")
     public ResponseEntity<Map<String, Object>> start(
             @RequestHeader("X-Correlation-ID") String correlationId,
@@ -488,8 +520,8 @@ public class EnrollmentEndpoint {
      * Called by the SIS of the guest institution to report back results that need to be sent with oauth secured
      * to the home institution. V4 version for backward compatibility.
      */
-    @Operation(summary = "Proxy result",
-            description = "Called by the SIS of the guest institution to send the result to the home institution.")
+    @Operation(summary = "Proxy result (deprecated)",
+            description = "Called by the SIS of the guest institution to send the result to the home institution. Deprecated: Use /associations/{associationId} instead. ")
     @PostMapping("/api/results")
     public ResponseEntity<Map<String, Object>> results(@RequestBody Map<String, Object> results) {
         String personId = (String) results.get("personId");
