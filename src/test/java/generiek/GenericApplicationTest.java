@@ -28,7 +28,7 @@ class GenericApplicationTest {
         Map<String, Object> info = given()
                 .accept(ContentType.JSON)
                 .when()
-                .get("/internal/info")
+                .get("/internal/health")
                 .as(new TypeRef<Map<String, Object>>() {
                 });
         assertFalse(info.isEmpty());
