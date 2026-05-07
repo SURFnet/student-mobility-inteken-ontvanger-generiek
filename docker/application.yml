@@ -61,8 +61,14 @@ sis:
 # Details on which custom inteken implementation to call including credentials
 backend:
   url: "http://localhost:8093/intake"
+  # Supported values: basic, oauth
+  authentication_type: basic
   api_user: user
   api_password: secret
+  oidc-authorization-uri: ""
+  oidc-client-id: ""
+  oidc-client-secret: ""
+  oidc-scope: ""
 
 oidc:
   acr-context-class-ref: https://eduid.nl/trust/affiliation-student

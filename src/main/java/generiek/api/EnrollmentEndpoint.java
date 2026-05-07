@@ -8,6 +8,7 @@ import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import generiek.LanguageFilter;
 import generiek.ServiceRegistry;
+import generiek.config.BackendConfiguration;
 import generiek.exception.ExpiredEnrollmentRequestException;
 import generiek.jwt.JWTValidator;
 import generiek.model.Association;
@@ -70,9 +71,7 @@ public class EnrollmentEndpoint {
     private final String redirectUri;
     private final URI authorizationUri;
     private final URI tokenUri;
-    private final URI backendUrl;
-    private final String backendApiUser;
-    private final String backendApiPassword;
+    private final BackendConfiguration backendConfiguration;
     private final String brokerUrl;
     private final ServiceRegistry serviceRegistry;
     private final boolean allowPlayground;
@@ -93,9 +92,7 @@ public class EnrollmentEndpoint {
                               @Value("${oidc.authorization-uri}") URI authorizationUri,
                               @Value("${oidc.token-uri}") URI tokenUri,
                               @Value("${oidc.jwk-set-uri}") String jwkSetUri,
-                              @Value("${backend.url}") URI backendUrl,
-                              @Value("${backend.api_user}") String backendApiUser,
-                              @Value("${backend.api_password}") String backendApiPassword,
+                              BackendConfiguration backendConfiguration,
                               @Value("${broker.url}") String brokerUrl,
                               @Value("${features.allow_playground}") boolean allowPlayground,
                               @Value("${features.require_eduid}") boolean eduIDRequired,
@@ -116,9 +113,7 @@ public class EnrollmentEndpoint {
         this.authorizationUri = authorizationUri;
         this.tokenUri = tokenUri;
         this.jwtValidator = new JWTValidator(jwkSetUri, jwkConnectionTimeout, jwkReadTimeout, jwkSizeLimit);
-        this.backendUrl = backendUrl;
-        this.backendApiUser = backendApiUser;
-        this.backendApiPassword = backendApiPassword;
+        this.backendConfiguration = backendConfiguration;
         this.brokerUrl = brokerUrl;
         this.enrollmentRepository = enrollmentRepository;
         this.associationRepository = associationRepository;
@@ -270,6 +265,44 @@ public class EnrollmentEndpoint {
         return restTemplate.exchange(tokenUri, HttpMethod.POST, request, mapRef).getBody();
     }
 
+    private HttpEntity<Map<String, Object>> createBackendHttpEntity(Map<String, Map<String, Object>> body) {
+        HttpHeaders httpHeaders = new HttpHeaders();
+        if ("oauth".equalsIgnoreCase(backendConfiguration.getAuthenticationType())) {
+            httpHeaders.setBearerAuth(fetchBackendAccessToken());
+        } else {
+            httpHeaders.setBasicAuth(backendConfiguration.getApiUser(), backendConfiguration.getApiPassword());
+        }
+        return new HttpEntity(body, httpHeaders);
+    }
+
+    private String fetchBackendAccessToken() {
+        if (backendConfiguration.getOidcAuthorizationUri() == null
+                || !StringUtils.hasText(backendConfiguration.getOidcClientId())
+                || !StringUtils.hasText(backendConfiguration.getOidcClientSecret())) {
+            throw new IllegalStateException("backend oauth configuration is incomplete");
+        }
+
+        MultiValueMap<String, String> tokenRequestBody = new LinkedMultiValueMap<>();
+        tokenRequestBody.add("grant_type", "client_credentials");
+        tokenRequestBody.add("client_id", backendConfiguration.getOidcClientId());
+        tokenRequestBody.add("client_secret", backendConfiguration.getOidcClientSecret());
+        if (StringUtils.hasText(backendConfiguration.getOidcScope())) {
+            tokenRequestBody.add("scope", backendConfiguration.getOidcScope());
+        }
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+        HttpEntity<MultiValueMap<String, String>> tokenRequestEntity = new HttpEntity<>(tokenRequestBody, headers);
+
+        Map<String, Object> tokenResponse = restTemplate.exchange(backendConfiguration.getOidcAuthorizationUri(), HttpMethod.POST, tokenRequestEntity, mapRef).getBody();
+        String accessToken = tokenResponse == null ? null : (String) tokenResponse.get("access_token");
+        if (!StringUtils.hasText(accessToken)) {
+            throw new IllegalStateException("backend oauth token endpoint did not return an access_token");
+        }
+        return accessToken;
+    }
+
     /*
      * Start the actual enrollment based on the data returned from the 'me' endpoint
      */
@@ -381,13 +414,11 @@ public class EnrollmentEndpoint {
         }
         body.put("person", personMap);
 
-        HttpHeaders httpHeaders = new HttpHeaders();
-        httpHeaders.setBasicAuth(backendApiUser, backendApiPassword);
-        HttpEntity<Map<String, Object>> httpEntity = new HttpEntity(body, httpHeaders);
+        HttpEntity<Map<String, Object>> httpEntity = createBackendHttpEntity(body);
 
         LOG.debug("Returning registration result to broker");
         try {
-            ResponseEntity<Map<String, Object>> results = restTemplate.exchange(backendUrl, HttpMethod.POST, httpEntity, mapRef);
+            ResponseEntity<Map<String, Object>> results = restTemplate.exchange(backendConfiguration.getUrl(), HttpMethod.POST, httpEntity, mapRef);
             int code = (int) results.getBody().getOrDefault("code", 400);
             if (code >= 400) {
                 //Body can be immutable

@@ -11,6 +11,7 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import generiek.AbstractIntegrationTest;
 import generiek.WireMockExtension;
+import generiek.config.BackendConfiguration;
 import generiek.model.Association;
 import generiek.model.EnrollmentRequest;
 import generiek.model.PersonAuthentication;
@@ -28,6 +29,7 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
+import java.net.URI;
 import java.net.URLDecoder;
 import java.security.*;
 import java.security.interfaces.RSAPrivateKey;
@@ -62,6 +64,9 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
 
     @Autowired
     protected ObjectMapper objectMapper;
+
+    @Autowired
+    private BackendConfiguration backendConfiguration;
 
     @RegisterExtension
     WireMockExtension mockServer = new WireMockExtension(8081);
@@ -120,6 +125,29 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
         String correlationId = doToken(state);
         doStart(correlationId, PersonAuthentication.FORM.name());
         doAssociate(correlationId);
+    }
+
+    @Test
+    void fullScenarioWithBackendOauth() throws Exception {
+        String originalAuthenticationType = backendConfiguration.getAuthenticationType();
+
+        try {
+            backendConfiguration.setAuthenticationType("oauth");
+            backendConfiguration.setOidcAuthorizationUri(URI.create("http://localhost:8081/backend/oauth/token"));
+            backendConfiguration.setOidcClientId("backend-client");
+            backendConfiguration.setOidcClientSecret("backend-secret");
+            backendConfiguration.setOidcScope("backend-scope");
+
+            String state = doAuthorize(PersonAuthentication.HEADER.name());
+            String correlationId = doToken(state);
+            doStart(correlationId, PersonAuthentication.HEADER.name());
+
+            verify(postRequestedFor(urlPathEqualTo("/backend/oauth/token")));
+            verify(postRequestedFor(urlPathMatching("/intake"))
+                    .withHeader("Authorization", containing("Bearer backend-access-token")));
+        } finally {
+            backendConfiguration.setAuthenticationType(originalAuthenticationType);
+        }
     }
 
     @Test
@@ -658,6 +686,15 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                     .withHeader("Content-Type", "application/json")
                     .withBody(readFile("data/person.json"))));
         }
+
+        stubFor(post(urlPathEqualTo("/backend/oauth/token"))
+                .withRequestBody(containing("grant_type=client_credentials"))
+                .withRequestBody(containing("client_id=backend-client"))
+                .withRequestBody(containing("client_secret=backend-secret"))
+                .withRequestBody(containing("scope=backend-scope"))
+                .willReturn(aResponse()
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(objectMapper.writeValueAsString(singletonMap("access_token", "backend-access-token")))));
 
         stubFor(post(urlPathMatching("/intake")).willReturn(aResponse()
                 .withHeader("Content-Type", "application/json")
