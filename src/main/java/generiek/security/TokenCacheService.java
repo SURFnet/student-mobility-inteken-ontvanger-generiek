@@ -1,21 +1,19 @@
 package generiek.security;
 
-import java.io.Serializable;
 import java.text.ParseException;
 import java.util.Objects;
 
-import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.JWTParser;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 
 @Service
-public class TokenService {
+public class TokenCacheService {
     private final CacheManager cacheManager;
 
     // Constructor injection is de Spring best practice
-    public TokenService(CacheManager cacheManager) {
+    public TokenCacheService(CacheManager cacheManager) {
         this.cacheManager = cacheManager;
     }
 

@@ -16,7 +16,7 @@ import generiek.model.PersonAuthentication;
 import generiek.ooapi.EnrollmentAssociation;
 import generiek.repository.AssociationRepository;
 import generiek.repository.EnrollmentRepository;
-import generiek.security.TokenService;
+import generiek.security.TokenCacheService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -85,7 +85,7 @@ public class EnrollmentEndpoint {
     private final ParameterizedTypeReference<Map<String, Object>> mapRef = new ParameterizedTypeReference<Map<String, Object>>() {
     };
     private final JWTValidator jwtValidator;
-    private final TokenService tokenService;
+    private final TokenCacheService tokenCacheService;
 
     public EnrollmentEndpoint(@Value("${oidc.acr-context-class-ref}") String acr,
                               @Value("${oidc.client-id}") String clientId,
@@ -110,7 +110,7 @@ public class EnrollmentEndpoint {
                               AssociationRepository associationRepository,
                               ServiceRegistry serviceRegistry,
                               ObjectMapper objectMapper,
-                              TokenService tokenService) throws MalformedURLException {
+                              TokenCacheService tokenCacheService) throws MalformedURLException {
         this.acr = acr;
         this.clientId = clientId;
         this.clientSecret = clientSecret;
@@ -126,7 +126,7 @@ public class EnrollmentEndpoint {
         this.associationRepository = associationRepository;
         this.serviceRegistry = serviceRegistry;
         this.objectMapper = objectMapper;
-        this.tokenService = tokenService;
+        this.tokenCacheService = tokenCacheService;
         this.allowPlayground = allowPlayground;
         this.eduIDRequired = eduIDRequired;
         // Otherwise, we can't use method PATCH
@@ -251,7 +251,7 @@ public class EnrollmentEndpoint {
         if (this.eduIDRequired) {
             enrollmentRequest.setEduid(eduid);
         }
-        tokenService.saveToken(enrollmentRequest.getIdentifier(), accessToken);
+        tokenCacheService.saveToken(enrollmentRequest.getIdentifier(), accessToken);
         enrollmentRequest.setRefreshToken(refreshToken);
         enrollmentRepository.save(enrollmentRequest);
 
@@ -819,7 +819,7 @@ public class EnrollmentEndpoint {
     }
 
     private String resolveEnrollmentRequestAccessToken(EnrollmentRequest enrollmentRequest, boolean forceRefresh) {
-        var accessToken = tokenService.getToken(enrollmentRequest.getIdentifier());
+        var accessToken = tokenCacheService.getToken(enrollmentRequest.getIdentifier());
 
         if (accessToken != null && !forceRefresh) {
             return accessToken;
@@ -838,7 +838,7 @@ public class EnrollmentEndpoint {
         accessToken = (String) oidcResponse.get("access_token");
 
 
-        tokenService.saveToken(enrollmentRequest.getIdentifier(), accessToken);
+        tokenCacheService.saveToken(enrollmentRequest.getIdentifier(), accessToken);
         enrollmentRequest.setRefreshToken(refreshToken);
         enrollmentRepository.save(enrollmentRequest);
 
