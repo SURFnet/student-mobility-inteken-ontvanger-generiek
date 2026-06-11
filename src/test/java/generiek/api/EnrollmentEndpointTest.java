@@ -254,7 +254,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                 .withBody(objectMapper.writeValueAsString(singletonMap("associationsURI", "http://localhost:8081/associations")))));
 
         Map<String, String> tokenResult = new HashMap<>();
-        tokenResult.put("access_token", "123456");
+        tokenResult.put("access_token", "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImQ2MWEwZGJhODNkODZiZmNiOWFlY2I2MzEyNjU1NTI2In0.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiZXhwIjoxNzgxMTcwNzg0fQ.w9obz51STU5XAoZre9TPpx2biXP7WzbE9Z12rDQ5VvwfOILkY8_LsVlCPERZCgfWfJaYoDjnGMVj640l05cGvg");
         tokenResult.put("refresh_token", "123456");
 
         stubFor(post(urlPathMatching("/oidc/token")).willReturn(aResponse()
