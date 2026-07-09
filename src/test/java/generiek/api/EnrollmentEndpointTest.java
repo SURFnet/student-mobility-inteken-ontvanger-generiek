@@ -282,7 +282,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                 .withBody(objectMapper.writeValueAsString(singletonMap("associationsURI", "http://localhost:8081/associations")))));
 
         Map<String, String> tokenResult = new HashMap<>();
-        tokenResult.put("access_token", "123456");
+        tokenResult.put("access_token", "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImQ2MWEwZGJhODNkODZiZmNiOWFlY2I2MzEyNjU1NTI2In0.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiZXhwIjoxNzgxMTcwNzg0fQ.w9obz51STU5XAoZre9TPpx2biXP7WzbE9Z12rDQ5VvwfOILkY8_LsVlCPERZCgfWfJaYoDjnGMVj640l05cGvg");
         tokenResult.put("refresh_token", "123456");
 
         stubFor(post(urlPathMatching("/oidc/token")).willReturn(aResponse()
@@ -587,6 +587,43 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                 .as(Map.class);
         assertTrue(((String) result.get("description")).startsWith("Error in retrieving person for enrollmentRequest"));
         assertEquals(true, result.get("error"));
+    }
+
+    @Test
+    void accessTokenNotStoredInDatabaseAndNotRefetchedOnSubsequentCalls() throws Exception {
+        String state = doAuthorize(PersonAuthentication.HEADER.name());
+        String correlationId = doToken(state); // calls /oidc/token once
+
+        stubFor(post(urlPathMatching("/api/associations-uri")).willReturn(aResponse()
+                .withHeader("Content-Type", "application/json")
+                .withBody(objectMapper.writeValueAsString(singletonMap("associationsURI", "http://localhost:8081/associations")))));
+        stubFor(post(urlPathMatching("/associations/external/me")).willReturn(aResponse()
+                .withStatus(201)
+                .withBody(readFile("data/association_me.json"))
+                .withHeader("Content-Type", "application/json")));
+
+        EnrollmentRequest enrollmentRequest = enrollmentRepository.findByIdentifier(correlationId).get();
+
+        // First call
+        given().when()
+                .contentType(ContentType.JSON).accept(ContentType.JSON)
+                .auth().basic("sis", "secret")
+                .body(new HashMap<>())
+                .pathParam("personId", enrollmentRequest.getEduid())
+                .post("/associations/external/{personId}")
+                .then().statusCode(201);
+
+        // Second call — token must be reused, no extra fetch
+        given().when()
+                .contentType(ContentType.JSON).accept(ContentType.JSON)
+                .auth().basic("sis", "secret")
+                .body(new HashMap<>())
+                .pathParam("personId", enrollmentRequest.getEduid())
+                .post("/associations/external/{personId}")
+                .then().statusCode(201);
+
+        // Token endpoint must have been called exactly once (during doToken, not during the two API calls)
+        verify(exactly(1), postRequestedFor(urlPathMatching("/oidc/token")));
     }
 
     @Test

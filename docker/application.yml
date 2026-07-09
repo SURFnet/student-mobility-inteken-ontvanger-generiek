@@ -32,6 +32,12 @@ spring:
     # password: secret
   flyway:
     locations: classpath:db/{vendor}/migration
+  cache:
+    type: caffeine
+    cache-names:
+      - Tokens
+    caffeine:
+      spec: expireAfterWrite=15m,maximumSize=500
 
 config:
   connection_timeout_millis: 20_000

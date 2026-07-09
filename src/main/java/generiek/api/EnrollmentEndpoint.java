@@ -17,6 +17,7 @@ import generiek.model.PersonAuthentication;
 import generiek.ooapi.EnrollmentAssociation;
 import generiek.repository.AssociationRepository;
 import generiek.repository.EnrollmentRepository;
+import generiek.security.TokenCacheService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -55,7 +56,6 @@ import java.net.URLEncoder;
 import java.text.ParseException;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 
@@ -84,6 +84,7 @@ public class EnrollmentEndpoint {
     private final ParameterizedTypeReference<Map<String, Object>> mapRef = new ParameterizedTypeReference<Map<String, Object>>() {
     };
     private final JWTValidator jwtValidator;
+    private final TokenCacheService tokenCacheService;
 
     public EnrollmentEndpoint(@Value("${oidc.acr-context-class-ref}") String acr,
                               @Value("${oidc.client-id}") String clientId,
@@ -105,7 +106,8 @@ public class EnrollmentEndpoint {
                               EnrollmentRepository enrollmentRepository,
                               AssociationRepository associationRepository,
                               ServiceRegistry serviceRegistry,
-                              ObjectMapper objectMapper) throws MalformedURLException {
+                              ObjectMapper objectMapper,
+                              TokenCacheService tokenCacheService) throws MalformedURLException {
         this.acr = acr;
         this.clientId = clientId;
         this.clientSecret = clientSecret;
@@ -119,6 +121,7 @@ public class EnrollmentEndpoint {
         this.associationRepository = associationRepository;
         this.serviceRegistry = serviceRegistry;
         this.objectMapper = objectMapper;
+        this.tokenCacheService = tokenCacheService;
         this.allowPlayground = allowPlayground;
         this.eduIDRequired = eduIDRequired;
         // Otherwise, we can't use method PATCH
@@ -243,7 +246,7 @@ public class EnrollmentEndpoint {
         if (this.eduIDRequired) {
             enrollmentRequest.setEduid(eduid);
         }
-        enrollmentRequest.setAccessToken(accessToken);
+        tokenCacheService.saveToken(enrollmentRequest.getIdentifier(), accessToken);
         enrollmentRequest.setRefreshToken(refreshToken);
         enrollmentRepository.save(enrollmentRequest);
 
@@ -309,80 +312,80 @@ public class EnrollmentEndpoint {
     @Operation(summary = "Start Registration",
             description = "Triggers the actual registration at the guest institution using the student's data.")
     @io.swagger.v3.oas.annotations.parameters.RequestBody(
-        description = "The OOAPI v4 Offering object representing the course or component the student is enrolling in.",
-        required = true,
-        content = @Content(
-            mediaType = MediaType.APPLICATION_JSON_VALUE,
-            examples = @ExampleObject(
-                name = "OOAPI v4 Offering Example",
-                summary = "A comprehensive OOAPI v4 Offering example",
-                value = "{\n" +
-                        "  \"offeringId\": \"123e4567-e89b-12d3-a456-134564174000\",\n" +
-                        "  \"offeringType\": \"component\",\n" +
-                        "  \"academicSession\": \"937983ad-cc0f-45a6-95ca-a8f60b7cf125\",\n" +
-                        "  \"name\": [{ \"language\": \"en-GB\", \"value\": \"Final written test for INFOMQNM\" }],\n" +
-                        "  \"abbreviation\": \"Test-INFOMQNM-20FS\",\n" +
-                        "  \"description\": [{ \"language\": \"en-GB\", \"value\": \"Research methods and statistics...\" }],\n" +
-                        "  \"teachingLanguage\": \"nld\",\n" +
-                        "  \"modeOfDelivery\": [ \"situated\" ],\n" +
-                        "  \"startDate\": \"2019-08-21\",\n" +
-                        "  \"endDate\": \"2023-06-15\",\n" +
-                        "  \"enrollStartDate\": \"2019-05-01\",\n" +
-                        "  \"enrollEndDate\": \"2019-08-01\",\n" +
-                        "  \"resultExpected\": true,\n" +
-                        "  \"resultValueType\": \"1-10\",\n" +
-                        "  \"organization\": \"452c1a86-a0af-475b-b03f-724878b0f387\"\n" +
-                        "}"
+            description = "The OOAPI v4 Offering object representing the course or component the student is enrolling in.",
+            required = true,
+            content = @Content(
+                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                    examples = @ExampleObject(
+                            name = "OOAPI v4 Offering Example",
+                            summary = "A comprehensive OOAPI v4 Offering example",
+                            value = "{\n" +
+                                    "  \"offeringId\": \"123e4567-e89b-12d3-a456-134564174000\",\n" +
+                                    "  \"offeringType\": \"component\",\n" +
+                                    "  \"academicSession\": \"937983ad-cc0f-45a6-95ca-a8f60b7cf125\",\n" +
+                                    "  \"name\": [{ \"language\": \"en-GB\", \"value\": \"Final written test for INFOMQNM\" }],\n" +
+                                    "  \"abbreviation\": \"Test-INFOMQNM-20FS\",\n" +
+                                    "  \"description\": [{ \"language\": \"en-GB\", \"value\": \"Research methods and statistics...\" }],\n" +
+                                    "  \"teachingLanguage\": \"nld\",\n" +
+                                    "  \"modeOfDelivery\": [ \"situated\" ],\n" +
+                                    "  \"startDate\": \"2019-08-21\",\n" +
+                                    "  \"endDate\": \"2023-06-15\",\n" +
+                                    "  \"enrollStartDate\": \"2019-05-01\",\n" +
+                                    "  \"enrollEndDate\": \"2019-08-01\",\n" +
+                                    "  \"resultExpected\": true,\n" +
+                                    "  \"resultValueType\": \"1-10\",\n" +
+                                    "  \"organization\": \"452c1a86-a0af-475b-b03f-724878b0f387\"\n" +
+                                    "}"
+                    )
             )
-        )
     )
     @ApiResponses(value = {
-        @ApiResponse(
-            responseCode = "200", 
-            description = "Enrollment status (Success or Handled Error)",
-            content = @Content(
-                mediaType = MediaType.APPLICATION_JSON_VALUE,
-                examples = {
-                    @ExampleObject(
-                        name = "Success Response",
-                        summary = "Enrollment successfully initiated",
-                        value = "{\n" +
-                                "  \"result\": \"ok\",\n" +
-                                "  \"code\": 200,\n" +
-                                "  \"message\": \"Your enrollment request has been received.\",\n" +
-                                "  \"oo-api-offering-id\": \"123e4567-e89b-12d3-a456-134564174000\",\n" +
-                                "  \"redirect\": \"https://optional.redirect/for-extra-information\"\n" +
-                                "}"
-                    ),
-                    @ExampleObject(
-                        name = "Handled Backend Error",
-                        summary = "Business error from SIS with support reference",
-                        value = "{\n" +
-                                "  \"result\": \"error\",\n" +
-                                "  \"code\": 400,\n" +
-                                "  \"message\": \"Student already registered for this component.\",\n" +
-                                "  \"reference\": \"REQ-af82-238d-1192\",\n" +
-                                "  \"oo-api-offering-id\": \"123e4567-e89b-12d3-a456-134564174000\"\n" +
-                                "}"
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Enrollment status (Success or Handled Error)",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            examples = {
+                                    @ExampleObject(
+                                            name = "Success Response",
+                                            summary = "Enrollment successfully initiated",
+                                            value = "{\n" +
+                                                    "  \"result\": \"ok\",\n" +
+                                                    "  \"code\": 200,\n" +
+                                                    "  \"message\": \"Your enrollment request has been received.\",\n" +
+                                                    "  \"oo-api-offering-id\": \"123e4567-e89b-12d3-a456-134564174000\",\n" +
+                                                    "  \"redirect\": \"https://optional.redirect/for-extra-information\"\n" +
+                                                    "}"
+                                    ),
+                                    @ExampleObject(
+                                            name = "Handled Backend Error",
+                                            summary = "Business error from SIS with support reference",
+                                            value = "{\n" +
+                                                    "  \"result\": \"error\",\n" +
+                                                    "  \"code\": 400,\n" +
+                                                    "  \"message\": \"Student already registered for this component.\",\n" +
+                                                    "  \"reference\": \"REQ-af82-238d-1192\",\n" +
+                                                    "  \"oo-api-offering-id\": \"123e4567-e89b-12d3-a456-134564174000\"\n" +
+                                                    "}"
+                                    )
+                            }
                     )
-                }
+            ),
+            @ApiResponse(
+                    responseCode = "500",
+                    description = "Technical connection failure",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            examples = @ExampleObject(
+                                    name = "Connection Exception",
+                                    summary = "Exception when communicating with the backend SIS",
+                                    value = "{\n" +
+                                            "  \"message\": \"Error in registration results for enrollmentRequest: ...\",\n" +
+                                            "  \"error\": \"Internal Server Error\"\n" +
+                                            "}"
+                            )
+                    )
             )
-        ),
-        @ApiResponse(
-            responseCode = "500", 
-            description = "Technical connection failure",
-            content = @Content(
-                mediaType = MediaType.APPLICATION_JSON_VALUE,
-                examples = @ExampleObject(
-                    name = "Connection Exception",
-                    summary = "Exception when communicating with the backend SIS",
-                    value = "{\n" +
-                            "  \"message\": \"Error in registration results for enrollmentRequest: ...\",\n" +
-                            "  \"error\": \"Internal Server Error\"\n" +
-                            "}"
-                )
-            )
-        )
     })
     @PostMapping("/api/start")
     public ResponseEntity<Map<String, Object>> start(
@@ -721,9 +724,20 @@ public class EnrollmentEndpoint {
                                                                           HttpMethod httpMethod,
                                                                           boolean returnHttpStatusOk,
                                                                           boolean retry) {
+
+        var refreshAccessToken = !retry;
+        String accessToken = null;
+
+        try {
+            accessToken = resolveEnrollmentRequestAccessToken(enrollmentRequest, refreshAccessToken);
+        } catch (HttpStatusCodeException e2) {
+            return this.errorResponseEntity("Error in obtaining new accessToken with saved refreshToken for enrolment request:" + enrollmentRequest, e2);
+        }
+
         HttpHeaders httpHeaders = getOidcAuthorizationHttpHeaders(
-                enrollmentRequest.getAccessToken(),
-                PersonAuthentication.HEADER.name());
+                accessToken,
+                PersonAuthentication.HEADER.name()
+        );
         HttpEntity<Map<String, Object>> requestEntity = new HttpEntity(body, httpHeaders);
 
         try {
@@ -735,12 +749,7 @@ public class EnrollmentEndpoint {
                     .body(exchanged.getBody());
         } catch (HttpStatusCodeException e) {
             if (retry) {
-                try {
-                    EnrollmentRequest refreshedEnrollmentRequest = refreshTokens(enrollmentRequest);
-                    return exchangeToHomeInstitution(refreshedEnrollmentRequest, body, uri, httpMethod, returnHttpStatusOk, false);
-                } catch (HttpStatusCodeException e2) {
-                    return this.errorResponseEntity("Error in obtaining new accessToken with saved refreshToken for enrolment request:" + enrollmentRequest, e2);
-                }
+                return exchangeToHomeInstitution(enrollmentRequest, body, uri, httpMethod, returnHttpStatusOk, false);
             } else {
                 return this.errorResponseEntity(String.format("Error %s from the OOAPI endpoint %s for enrolment request: %s.",
                         e.getStatusCode(),
@@ -748,28 +757,6 @@ public class EnrollmentEndpoint {
                         enrollmentRequest), e);
             }
         }
-    }
-
-    private EnrollmentRequest refreshTokens(EnrollmentRequest enrollmentRequest) {
-        LOG.debug("Obtaining new accessToken with saved refreshToken for enrolment request: " + enrollmentRequest);
-
-        MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
-        map.add("client_id", clientId);
-        map.add("client_secret", clientSecret);
-        map.add("grant_type", "refresh_token");
-        map.add("refresh_token", enrollmentRequest.getRefreshToken());
-
-        Map<String, Object> oidcResponse = tokenRequest(map);
-        String accessToken = (String) oidcResponse.get("access_token");
-        String refreshToken = (String) oidcResponse.get("refresh_token");
-
-        //If all went well, save the new access token and refresh token in the enrollment request
-        enrollmentRequest.setAccessToken(accessToken);
-        enrollmentRequest.setRefreshToken(refreshToken);
-
-        enrollmentRepository.save(enrollmentRequest);
-
-        return enrollmentRequest;
     }
 
     private ResponseEntity<Map<String, Object>> errorResponseEntity(String description, HttpStatusCodeException e) {
@@ -789,14 +776,14 @@ public class EnrollmentEndpoint {
 
     private Map<String, Object> person(EnrollmentRequest enrollmentRequest) {
         String personAuth = enrollmentRequest.getPersonAuth();
-        HttpHeaders httpHeaders = getOidcAuthorizationHttpHeaders(
-                enrollmentRequest.getAccessToken(), personAuth);
+        String accessToken = resolveEnrollmentRequestAccessToken(enrollmentRequest);
+        HttpHeaders httpHeaders = getOidcAuthorizationHttpHeaders(accessToken, personAuth);
 
         LOG.debug("Retrieve person information from : " + enrollmentRequest.getPersonURI() + " using personAuth; " + personAuth);
 
         if (personAuth.equalsIgnoreCase(PersonAuthentication.FORM.name())) {
             MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
-            map.add("access_token", enrollmentRequest.getAccessToken());
+            map.add("access_token", accessToken);
             HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(map, httpHeaders);
             return restTemplate.exchange(enrollmentRequest.getPersonURI(), HttpMethod.POST, requestEntity, mapRef).getBody();
         } else {
@@ -821,9 +808,9 @@ public class EnrollmentEndpoint {
         String base64Enrollment = enrollmentRequest.serializeToBase64(objectMapper);
 
         List<ClaimsSetRequest.Entry> entries = Stream.of(
-                "family_name",
-                "given_name",
-                "eduid")
+                        "family_name",
+                        "given_name",
+                        "eduid")
                 .filter(claimValue -> this.eduIDRequired || !claimValue.equals("eduid"))
                 .map(ClaimsSetRequest.Entry::new)
                 .toList();
@@ -858,4 +845,34 @@ public class EnrollmentEndpoint {
         }
     }
 
+    private String resolveEnrollmentRequestAccessToken(EnrollmentRequest enrollmentRequest) {
+        return resolveEnrollmentRequestAccessToken(enrollmentRequest, false);
+    }
+
+    private String resolveEnrollmentRequestAccessToken(EnrollmentRequest enrollmentRequest, boolean forceRefresh) {
+        var accessToken = tokenCacheService.getToken(enrollmentRequest.getIdentifier());
+
+        if (accessToken != null && !forceRefresh) {
+            return accessToken;
+        }
+
+        LOG.debug("Obtaining new accessToken with saved refreshToken for enrolment request: " + enrollmentRequest);
+
+        MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
+        map.add("client_id", clientId);
+        map.add("client_secret", clientSecret);
+        map.add("grant_type", "refresh_token");
+        map.add("refresh_token", enrollmentRequest.getRefreshToken());
+
+        var oidcResponse = tokenRequest(map);
+        var refreshToken = (String) oidcResponse.get("refresh_token");
+        accessToken = (String) oidcResponse.get("access_token");
+
+
+        tokenCacheService.saveToken(enrollmentRequest.getIdentifier(), accessToken);
+        enrollmentRequest.setRefreshToken(refreshToken);
+        enrollmentRepository.save(enrollmentRequest);
+
+        return accessToken;
+    }
 }
