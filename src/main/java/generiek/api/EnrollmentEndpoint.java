@@ -85,6 +85,8 @@ public class EnrollmentEndpoint {
     };
     private final JWTValidator jwtValidator;
 
+    private static final String GENERIC_STUDENT_NAME = "student";
+
     public EnrollmentEndpoint(@Value("${oidc.acr-context-class-ref}") String acr,
                               @Value("${oidc.client-id}") String clientId,
                               @Value("${oidc.client-secret}") String clientSecret,
@@ -218,11 +220,6 @@ public class EnrollmentEndpoint {
         jwtValidator.validate(accessToken);
         JWTClaimsSet claimsSet = jwtValidator.validate(idToken);
 
-        String givenName = claimsSet.getStringClaim("given_name");
-        //Very unlikely and why break on this?
-        givenName = StringUtils.hasText(givenName) ? givenName : "Mystery guest";
-        givenName = URLEncoder.encode(givenName, "UTF-8");
-
         String eduid = claimsSet.getStringClaim("eduid");
         if (!StringUtils.hasText(eduid) && this.eduIDRequired) {
             LOG.error("eduid is required. Check the ARP for RP:" + this.clientId);
@@ -248,7 +245,7 @@ public class EnrollmentEndpoint {
         enrollmentRepository.save(enrollmentRequest);
 
         String redirect = String.format("%s?step=enroll&correlationID=%s&name=%s",
-                brokerUrl, enrollmentRequest.getIdentifier(), givenName);
+                brokerUrl, enrollmentRequest.getIdentifier(), GENERIC_STUDENT_NAME);
 
         LOG.debug(String.format("Redirecting back to %s client after authorization", redirect));
 
