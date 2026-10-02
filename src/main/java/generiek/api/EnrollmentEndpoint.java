@@ -12,11 +12,16 @@ import generiek.config.BackendConfiguration;
 import generiek.exception.ExpiredEnrollmentRequestException;
 import generiek.jwt.JWTValidator;
 import generiek.model.Association;
+import generiek.model.CustomAgreementDetails;
 import generiek.model.EnrollmentRequest;
 import generiek.model.PersonAuthentication;
+import generiek.model.StudentDetails;
+import generiek.model.StudentDetailsForm;
 import generiek.ooapi.EnrollmentAssociation;
 import generiek.repository.AssociationRepository;
+import generiek.repository.CustomAgreementDetailsRepository;
 import generiek.repository.EnrollmentRepository;
+import generiek.repository.StudentDetailsRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -53,6 +58,7 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.text.ParseException;
+import java.time.LocalDate;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -73,11 +79,14 @@ public class EnrollmentEndpoint {
     private final URI tokenUri;
     private final BackendConfiguration backendConfiguration;
     private final String brokerUrl;
+    private final String clientUrl;
     private final ServiceRegistry serviceRegistry;
     private final boolean allowPlayground;
     private final boolean eduIDRequired;
     private final EnrollmentRepository enrollmentRepository;
     private final AssociationRepository associationRepository;
+    private final StudentDetailsRepository studentDetailsRepository;
+    private final CustomAgreementDetailsRepository customAgreementDetailsRepository;
     private final ObjectMapper objectMapper;
 
     private final RestTemplate restTemplate;
@@ -94,6 +103,7 @@ public class EnrollmentEndpoint {
                               @Value("${oidc.jwk-set-uri}") String jwkSetUri,
                               BackendConfiguration backendConfiguration,
                               @Value("${broker.url}") String brokerUrl,
+                              @Value("${client.url}") String clientUrl,
                               @Value("${features.allow_playground}") boolean allowPlayground,
                               @Value("${features.require_eduid}") boolean eduIDRequired,
                               @Value("${config.connection_timeout_millis}") int connectionTimeoutMillis,
@@ -104,6 +114,8 @@ public class EnrollmentEndpoint {
                               @Value("${oidc.jwk.size-limit}") int jwkSizeLimit,
                               EnrollmentRepository enrollmentRepository,
                               AssociationRepository associationRepository,
+                              StudentDetailsRepository studentDetailsRepository,
+                              CustomAgreementDetailsRepository customAgreementDetailsRepository,
                               ServiceRegistry serviceRegistry,
                               ObjectMapper objectMapper) throws MalformedURLException {
         this.acr = acr;
@@ -115,8 +127,11 @@ public class EnrollmentEndpoint {
         this.jwtValidator = new JWTValidator(jwkSetUri, jwkConnectionTimeout, jwkReadTimeout, jwkSizeLimit);
         this.backendConfiguration = backendConfiguration;
         this.brokerUrl = brokerUrl;
+        this.clientUrl = clientUrl;
         this.enrollmentRepository = enrollmentRepository;
         this.associationRepository = associationRepository;
+        this.studentDetailsRepository = studentDetailsRepository;
+        this.customAgreementDetailsRepository = customAgreementDetailsRepository;
         this.serviceRegistry = serviceRegistry;
         this.objectMapper = objectMapper;
         this.allowPlayground = allowPlayground;
@@ -246,6 +261,17 @@ public class EnrollmentEndpoint {
         enrollmentRequest.setAccessToken(accessToken);
         enrollmentRequest.setRefreshToken(refreshToken);
         enrollmentRepository.save(enrollmentRequest);
+        saveCustomAgreementDetails(enrollmentRequest);
+
+        if (hasMissingStudentDetailFields(resolveStudentDetailFields(enrollmentRequest))) {
+            String detailsRedirect = String.format("%s?correlationID=%s&name=%s",
+                    clientUrl, enrollmentRequest.getIdentifier(), givenName);
+
+            LOG.debug(String.format("Missing student details for enrollmentRequest %s, redirecting to %s",
+                    enrollmentRequest, detailsRedirect));
+
+            return new RedirectView(detailsRedirect, false);
+        }
 
         String redirect = String.format("%s?step=enroll&correlationID=%s&name=%s",
                 brokerUrl, enrollmentRequest.getIdentifier(), givenName);
@@ -253,6 +279,181 @@ public class EnrollmentEndpoint {
         LOG.debug(String.format("Redirecting back to %s client after authorization", redirect));
 
         return new RedirectView(redirect, false);
+    }
+
+    /*
+     * Called by the generiek client to determine which student details (naam, adres, e-mail, telefoon,
+     * opleiding, studentnummer bij eigen instelling) are still missing and need to be filled in by hand
+     */
+    @Operation(summary = "Get student details status",
+            description = "Returns the currently known value and whether it is missing for each student detail field.")
+    @CrossOrigin(origins = "${client.url}")
+    @GetMapping("/api/student-details")
+    public ResponseEntity<Map<String, Object>> studentDetails(@RequestParam("correlationID") String correlationId) {
+        EnrollmentRequest enrollmentRequest = enrollmentRepository.findByIdentifier(correlationId)
+                .orElseThrow(ExpiredEnrollmentRequestException::new);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("correlationID", correlationId);
+        result.put("fields", resolveStudentDetailFields(enrollmentRequest));
+        return ResponseEntity.ok(result);
+    }
+
+    /*
+     * Called by the generiek client to persist the student details the student filled in by hand
+     */
+    @Operation(summary = "Submit student details",
+            description = "Persists the student-supplied details and returns the URL to redirect back to the broker.")
+    @CrossOrigin(origins = "${client.url}")
+    @PostMapping("/api/student-details")
+    public ResponseEntity<Map<String, Object>> submitStudentDetails(@RequestBody StudentDetailsForm form) {
+        EnrollmentRequest enrollmentRequest = enrollmentRepository.findByIdentifier(form.getCorrelationID())
+                .orElseThrow(ExpiredEnrollmentRequestException::new);
+
+        LOG.debug("Received student details for enrollmentRequest: " + enrollmentRequest);
+
+        StudentDetails studentDetails = studentDetailsRepository.findByEnrollmentRequest(enrollmentRequest)
+                .orElseGet(() -> new StudentDetails(enrollmentRequest));
+        studentDetails.setNaam(blankToNull(form.getNaam()));
+        studentDetails.setAdres(blankToNull(form.getAdres()));
+        studentDetails.setEmail(blankToNull(form.getEmail()));
+        studentDetails.setTelefoon(blankToNull(form.getTelefoon()));
+        studentDetails.setOpleiding(blankToNull(form.getOpleiding()));
+        studentDetails.setStudentnummer(blankToNull(form.getStudentnummer()));
+        studentDetailsRepository.save(studentDetails);
+
+        String givenName = StringUtils.hasText(form.getNaam()) ? form.getNaam() : "Mystery guest";
+        String redirect = String.format("%s?step=enroll&correlationID=%s&name=%s",
+                brokerUrl, enrollmentRequest.getIdentifier(), URLEncoder.encode(givenName, java.nio.charset.StandardCharsets.UTF_8));
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("redirect", redirect);
+        return ResponseEntity.ok(result);
+    }
+
+    /*
+     * Resolves the student detail fields for an enrollmentRequest, fetching person data from the home
+     * institution as needed. Never throws: if the person fetch fails, all SIS-sourced fields are simply
+     * treated as unknown so the caller can still show/complete the student-details form.
+     */
+    Map<String, Map<String, Object>> resolveStudentDetailFields(EnrollmentRequest enrollmentRequest) {
+        Map<String, Object> personMap;
+        try {
+            personMap = person(enrollmentRequest);
+        } catch (HttpStatusCodeException e) {
+            LOG.warn("Could not fetch person data while resolving student details for enrollmentRequest: "
+                    + enrollmentRequest, e);
+            personMap = Collections.emptyMap();
+        }
+        return resolveStudentDetailFields(enrollmentRequest, personMap);
+    }
+
+    private Map<String, Map<String, Object>> resolveStudentDetailFields(EnrollmentRequest enrollmentRequest,
+                                                                         Map<String, Object> personMap) {
+        Optional<StudentDetails> existing = studentDetailsRepository.findByEnrollmentRequest(enrollmentRequest);
+
+        Map<String, Map<String, Object>> fields = new LinkedHashMap<>();
+        fields.put("naam", fieldStatus(personName(personMap), existing.map(StudentDetails::getNaam).orElse(null)));
+        fields.put("adres", fieldStatus(personAddress(personMap), existing.map(StudentDetails::getAdres).orElse(null)));
+        fields.put("email", fieldStatus((String) personMap.get("mail"), existing.map(StudentDetails::getEmail).orElse(null)));
+        fields.put("telefoon", fieldStatus(personTelefoon(personMap), existing.map(StudentDetails::getTelefoon).orElse(null)));
+        //opleiding is not part of the OOAPI person representation, so it always has to come from the student
+        fields.put("opleiding", fieldStatus(null, existing.map(StudentDetails::getOpleiding).orElse(null)));
+        fields.put("studentnummer", fieldStatus(personStudentnummer(personMap), existing.map(StudentDetails::getStudentnummer).orElse(null)));
+        return fields;
+    }
+
+    private boolean hasMissingStudentDetailFields(Map<String, Map<String, Object>> resolvedFields) {
+        return resolvedFields.values().stream()
+                .anyMatch(field -> Boolean.TRUE.equals(field.get("missing")));
+    }
+
+    /*
+     * Saving the custom agreement details to the database.
+     */
+    private void saveCustomAgreementDetails(EnrollmentRequest enrollmentRequest) {
+        boolean hasCarriedData = StringUtils.hasText(enrollmentRequest.getModuleNaam())
+                || StringUtils.hasText(enrollmentRequest.getModuleCode())
+                || enrollmentRequest.getOnderwijsperiodeStart() != null
+                || enrollmentRequest.getOnderwijsperiodeEind() != null
+                || StringUtils.hasText(enrollmentRequest.getThuisinstellingNaam())
+                || StringUtils.hasText(enrollmentRequest.getGastinstellingNaam());
+        if (!hasCarriedData) {
+            return;
+        }
+        CustomAgreementDetails details = new CustomAgreementDetails(enrollmentRequest);
+        details.setModuleNaam(enrollmentRequest.getModuleNaam());
+        details.setModuleCode(enrollmentRequest.getModuleCode());
+        details.setOnderwijsperiodeStart(enrollmentRequest.getOnderwijsperiodeStart());
+        details.setOnderwijsperiodeEind(enrollmentRequest.getOnderwijsperiodeEind());
+        details.setThuisinstellingNaam(enrollmentRequest.getThuisinstellingNaam());
+        details.setGastinstellingNaam(enrollmentRequest.getGastinstellingNaam());
+        customAgreementDetailsRepository.save(details);
+    }
+
+    private Map<String, Object> fieldStatus(String sourceValue, String overrideValue) {
+        String value = StringUtils.hasText(overrideValue) ? overrideValue : sourceValue;
+        Map<String, Object> status = new LinkedHashMap<>();
+        status.put("value", value);
+        status.put("missing", !StringUtils.hasText(value));
+        return status;
+    }
+
+    private String personName(Map<String, Object> personMap) {
+        String displayName = (String) personMap.get("displayName");
+        if (StringUtils.hasText(displayName)) {
+            return displayName;
+        }
+        String givenName = (String) personMap.get("givenName");
+        String surname = (String) personMap.get("surname");
+        if (StringUtils.hasText(givenName) || StringUtils.hasText(surname)) {
+            return String.format("%s %s", nullToEmpty(givenName), nullToEmpty(surname)).trim();
+        }
+        return null;
+    }
+
+    private String personTelefoon(Map<String, Object> personMap) {
+        String telephoneNumber = (String) personMap.get("telephoneNumber");
+        return StringUtils.hasText(telephoneNumber) ? telephoneNumber : (String) personMap.get("mobileNumber");
+    }
+
+    @SuppressWarnings("unchecked")
+    private String personAddress(Map<String, Object> personMap) {
+        Object addressObj = personMap.get("address");
+        if (!(addressObj instanceof Map)) {
+            return null;
+        }
+        Map<String, Object> address = (Map<String, Object>) addressObj;
+        String street = asString(address.get("street"));
+        String city = asString(address.get("city"));
+        if (!StringUtils.hasText(street) && !StringUtils.hasText(city)) {
+            return null;
+        }
+        String streetNumber = asString(address.get("streetNumber"));
+        String postalCode = asString(address.get("postalCode"));
+        return String.format("%s %s, %s %s", nullToEmpty(street), nullToEmpty(streetNumber),
+                nullToEmpty(postalCode), nullToEmpty(city)).trim().replaceAll("\\s+", " ");
+    }
+
+    @SuppressWarnings("unchecked")
+    private String personStudentnummer(Map<String, Object> personMap) {
+        Object primaryCodeObj = personMap.get("primaryCode");
+        if (primaryCodeObj instanceof Map) {
+            return asString(((Map<String, Object>) primaryCodeObj).get("code"));
+        }
+        return null;
+    }
+
+    private static String nullToEmpty(String value) {
+        return value == null ? "" : value;
+    }
+
+    private static String asString(Object value) {
+        return value == null ? null : String.valueOf(value);
+    }
+
+    private static String blankToNull(String value) {
+        return StringUtils.hasText(value) ? value.trim() : null;
     }
 
     private Map<String, Object> tokenRequest(MultiValueMap<String, String> map) {
@@ -265,7 +466,7 @@ public class EnrollmentEndpoint {
         return restTemplate.exchange(tokenUri, HttpMethod.POST, request, mapRef).getBody();
     }
 
-    private HttpEntity<Map<String, Object>> createBackendHttpEntity(Map<String, Map<String, Object>> body) {
+    private HttpEntity<Map<String, Object>> createBackendHttpEntity(Map<String, Object> body) {
         HttpHeaders httpHeaders = new HttpHeaders();
         if ("oauth".equalsIgnoreCase(backendConfiguration.getAuthenticationType())) {
             httpHeaders.setBearerAuth(fetchBackendAccessToken());
@@ -390,12 +591,56 @@ public class EnrollmentEndpoint {
             @RequestBody Map<String, Object> offering) {
         LOG.debug(String.format("Received start registration from broker for correlation-id %s and offering %s", correlationId, offering));
 
+        Map<String, Object> body = new HashMap<>();
+        body.put("offering", offering);
+        return this.startEnrollment(correlationId, body);
+    }
+
+    /*
+     * Receives data from the broker and saves it to the database.
+     */
+    @Operation(summary = "Capture program/offering data and route to the custom agreement client",
+            description = "Persists the module/institution data the broker extracted from the program and offering, " +
+                    "then returns the URL to redirect the student's browser to so they can fill in any missing " +
+                    "details and download the custom agreement PDF.")
+    @PostMapping("/api/start/kom-form-enrollment")
+    public ResponseEntity<Map<String, Object>> startKomFormEnrollment(
+            @RequestHeader("X-Correlation-ID") String correlationId,
+            @RequestBody Map<String, Object> payload) {
+        EnrollmentRequest enrollmentRequest = enrollmentRepository.findByIdentifier(correlationId)
+                .orElseThrow(ExpiredEnrollmentRequestException::new);
+
+        LOG.debug(String.format("Received program/offering data from broker for correlation-id %s: %s", correlationId, payload));
+
+        CustomAgreementDetails details = customAgreementDetailsRepository.findByEnrollmentRequest(enrollmentRequest)
+                .orElseGet(() -> new CustomAgreementDetails(enrollmentRequest));
+        putIfPresent(payload, "moduleNaam", details::setModuleNaam);
+        putIfPresent(payload, "moduleCode", details::setModuleCode);
+        putIfPresent(payload, "onderwijsperiodeStart", value -> details.setOnderwijsperiodeStart(LocalDate.parse(value)));
+        putIfPresent(payload, "onderwijsperiodeEind", value -> details.setOnderwijsperiodeEind(LocalDate.parse(value)));
+        putIfPresent(payload, "thuisinstellingNaam", details::setThuisinstellingNaam);
+        putIfPresent(payload, "gastinstellingNaam", details::setGastinstellingNaam);
+        customAgreementDetailsRepository.save(details);
+
+        String redirect = String.format("%s?correlationID=%s", clientUrl, enrollmentRequest.getIdentifier());
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("redirect", redirect);
+        return ResponseEntity.ok(result);
+    }
+
+    private void putIfPresent(Map<String, Object> payload, String key, java.util.function.Consumer<String> setter) {
+        Object value = payload.get(key);
+        if (value instanceof String && StringUtils.hasText((String) value)) {
+            setter.accept((String) value);
+        }
+    }
+
+    private ResponseEntity<Map<String, Object>> startEnrollment(String correlationId, Map<String, Object> body) {
         EnrollmentRequest enrollmentRequest = enrollmentRepository.findByIdentifier(correlationId)
                 .orElseThrow(ExpiredEnrollmentRequestException::new);
         LOG.debug(String.format("Found matching enrollment request %s for correlation-id %s", enrollmentRequest, correlationId));
 
-        Map<String, Map<String, Object>> body = new HashMap<>();
-        body.put("offering", offering);
         Map<String, Object> personMap;
         try {
             personMap = person(enrollmentRequest);

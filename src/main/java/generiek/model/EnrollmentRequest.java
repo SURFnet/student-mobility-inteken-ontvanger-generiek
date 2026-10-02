@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
@@ -15,6 +16,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.Serializable;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.*;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
@@ -71,12 +73,45 @@ public class EnrollmentRequest implements Serializable {
     @Column
     private Instant created;
 
+    /*
+     * The following fields are not persisted on this entity. They are supplied by the broker (which is
+     * the only party that has the offering / institution data) at /api/enrollment time, round-tripped
+     * through the OIDC "state" parameter (see (de)serializeToBase64 below) and - once the enrollment
+     * request has actually been saved in redirect() - persisted onto a related CustomAgreementDetails
+     * row so the customAgreement PDF can be generated later without the broker having to call back in.
+     */
+    @Transient
+    private String moduleNaam;
+
+    @Transient
+    private String moduleCode;
+
+    @Transient
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+    private LocalDate onderwijsperiodeStart;
+
+    @Transient
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+    private LocalDate onderwijsperiodeEind;
+
+    @Transient
+    private String thuisinstellingNaam;
+
+    @Transient
+    private String gastinstellingNaam;
+
     public EnrollmentRequest(EnrollmentRequest enrollmentRequest) {
         validate(enrollmentRequest);
         this.personURI = enrollmentRequest.personURI;
         this.personAuth = enrollmentRequest.personAuth;
         this.homeInstitution = enrollmentRequest.homeInstitution;
         this.scope = enrollmentRequest.scope;
+        this.moduleNaam = enrollmentRequest.moduleNaam;
+        this.moduleCode = enrollmentRequest.moduleCode;
+        this.onderwijsperiodeStart = enrollmentRequest.onderwijsperiodeStart;
+        this.onderwijsperiodeEind = enrollmentRequest.onderwijsperiodeEind;
+        this.thuisinstellingNaam = enrollmentRequest.thuisinstellingNaam;
+        this.gastinstellingNaam = enrollmentRequest.gastinstellingNaam;
         this.setIdentifier(UUID.randomUUID().toString());
         this.setCreated(Instant.now());
     }
@@ -94,6 +129,12 @@ public class EnrollmentRequest implements Serializable {
         result.put("h", this.homeInstitution);
         result.put("p", this.personURI);
         result.put("s", this.scope);
+        putIfHasText(result, "mn", this.moduleNaam);
+        putIfHasText(result, "mc", this.moduleCode);
+        putIfHasText(result, "os", this.onderwijsperiodeStart == null ? null : this.onderwijsperiodeStart.toString());
+        putIfHasText(result, "oe", this.onderwijsperiodeEind == null ? null : this.onderwijsperiodeEind.toString());
+        putIfHasText(result, "tn", this.thuisinstellingNaam);
+        putIfHasText(result, "gn", this.gastinstellingNaam);
         byte[] bytes = objectMapper.writeValueAsBytes(result);
 
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -136,12 +177,24 @@ public class EnrollmentRequest implements Serializable {
         enrollmentRequest.setHomeInstitution(map.get("h"));
         enrollmentRequest.setPersonURI(map.get("p"));
         enrollmentRequest.setScope(map.get("s"));
+        enrollmentRequest.setModuleNaam(map.get("mn"));
+        enrollmentRequest.setModuleCode(map.get("mc"));
+        enrollmentRequest.setOnderwijsperiodeStart(map.get("os") == null ? null : LocalDate.parse(map.get("os")));
+        enrollmentRequest.setOnderwijsperiodeEind(map.get("oe") == null ? null : LocalDate.parse(map.get("oe")));
+        enrollmentRequest.setThuisinstellingNaam(map.get("tn"));
+        enrollmentRequest.setGastinstellingNaam(map.get("gn"));
         enrollmentRequest.setIdentifier(UUID.randomUUID().toString());
         enrollmentRequest.setCreated(Instant.now());
 
         enrollmentRequest.validate(enrollmentRequest);
 
         return enrollmentRequest;
+    }
+
+    private static void putIfHasText(Map<String, String> map, String key, String value) {
+        if (StringUtils.hasText(value)) {
+            map.put(key, value);
+        }
     }
 
 }

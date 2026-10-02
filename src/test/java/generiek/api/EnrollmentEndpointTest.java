@@ -18,6 +18,8 @@ import generiek.model.PersonAuthentication;
 import io.restassured.http.ContentType;
 import lombok.SneakyThrows;
 import org.apache.commons.io.IOUtils;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -76,6 +78,9 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
 
     @Value("${broker.url}")
     private String brokerUrl;
+
+    @Value("${client.url}")
+    private String clientUrl;
 
     @BeforeAll
     static void beforeAll() throws JOSEException, NoSuchAlgorithmException, NoSuchProviderException {
@@ -615,6 +620,103 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
         assertEquals(true, result.get("error"));
     }
 
+    @Test
+    void customAgreementIncludesCarriedModuleDataAndStudentDetails() throws Exception {
+        stubFor(post(urlPathMatching("/api/validate-service-registry-endpoints")).willReturn(aResponse()
+                .withHeader("Content-Type", "application/json")
+                .withBody(objectMapper.writeValueAsString(singletonMap("valid", true)))));
+
+        String location = given().redirects().follow(false)
+                .when()
+                .header("Content-Type", APPLICATION_FORM_URLENCODED_VALUE)
+                .param("personURI", "http://localhost:8081/person")
+                .param("personAuth", PersonAuthentication.HEADER.name())
+                .param("homeInstitution", "schac.home")
+                .param("scope", "write")
+                .param("moduleNaam", "Audiovisual Production (ENG)")
+                .param("moduleCode", "K130901")
+                .param("onderwijsperiodeStart", "2026-02-02")
+                .param("onderwijsperiodeEind", "2026-07-03")
+                .param("thuisinstellingNaam", "Universiteit van Harderwijk")
+                .param("gastinstellingNaam", "Hogeschool Inholland")
+                .post("/api/enrollment")
+                .header("Location");
+        assertTrue(location.startsWith(authorizationUri));
+
+        MultiValueMap<String, String> params = UriComponentsBuilder.fromHttpUrl(location).build().getQueryParams();
+        String correlationId = doToken(params.getFirst("state"));
+
+        byte[] pdf = given()
+                .when()
+                .queryParam("correlationID", correlationId)
+                .get("/api/leerovereenkomst")
+                .then()
+                .statusCode(200)
+                .contentType("application/pdf")
+                .extract()
+                .asByteArray();
+
+        assertTrue(pdf.length > 0);
+
+        try (PDDocument document = PDDocument.load(pdf)) {
+            String text = new PDFTextStripper().getText(document);
+            //Broker-carried module/institution data
+            assertTrue(text.contains("Audiovisual Production (ENG)"));
+            assertTrue(text.contains("K130901"));
+            assertTrue(text.contains("Universiteit van Harderwijk"));
+            assertTrue(text.contains("Hogeschool Inholland"));
+            //Student details submitted through doStudentDetails() inside doToken()
+            //(the opleiding value wraps across lines in the narrow value column, so check a shorter substring)
+            assertTrue(text.contains("Advanced Business Creation"));
+            assertTrue(text.contains("000019"));
+        }
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void startKomFormEnrollmentCapturesModuleDataAndRoutesToClient() throws Exception {
+        String state = doAuthorize(PersonAuthentication.HEADER.name());
+        String correlationId = doToken(state);
+
+        Map<String, String> komFormEnrollmentPayload = new HashMap<>();
+        komFormEnrollmentPayload.put("moduleNaam", "Data Science for Society");
+        komFormEnrollmentPayload.put("moduleCode", "DSS-2026");
+        komFormEnrollmentPayload.put("onderwijsperiodeStart", "2026-09-01");
+        komFormEnrollmentPayload.put("onderwijsperiodeEind", "2027-01-31");
+        komFormEnrollmentPayload.put("thuisinstellingNaam", "Universiteit van Harderwijk");
+        komFormEnrollmentPayload.put("gastinstellingNaam", "Hogeschool Inholland");
+
+        Map result = given()
+                .when()
+                .contentType(ContentType.JSON)
+                .accept(ContentType.JSON)
+                .auth().basic("user", "secret")
+                .header("X-Correlation-ID", correlationId)
+                .body(komFormEnrollmentPayload)
+                .post("/api/start/kom-form-enrollment")
+                .as(Map.class);
+
+        assertEquals(clientUrl + "?correlationID=" + correlationId, result.get("redirect"));
+
+        byte[] pdf = given()
+                .when()
+                .queryParam("correlationID", correlationId)
+                .get("/api/leerovereenkomst")
+                .then()
+                .statusCode(200)
+                .contentType("application/pdf")
+                .extract()
+                .asByteArray();
+
+        try (PDDocument document = PDDocument.load(pdf)) {
+            String text = new PDFTextStripper().getText(document);
+            assertTrue(text.contains("Data Science for Society"));
+            assertTrue(text.contains("DSS-2026"));
+            assertTrue(text.contains("Universiteit van Harderwijk"));
+            assertTrue(text.contains("Hogeschool Inholland"));
+        }
+    }
+
     @SneakyThrows
     protected String doAuthorize(String personAuth) {
         stubFor(post(urlPathMatching("/api/validate-service-registry-endpoints")).willReturn(aResponse()
@@ -655,6 +757,12 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                 .withHeader("Content-Type", "application/json")
                 .withBody(objectMapper.writeValueAsString(tokenResult))));
 
+        //Person data is complete, but "opleiding" and "studentnummer" are never part of the OOAPI person
+        //representation, so the flow always has to divert to the student-details client first
+        stubFor(get(urlPathMatching("/person")).willReturn(aResponse()
+                .withHeader("Content-Type", "application/json")
+                .withBody(readFile("data/person.json"))));
+
         String location = given()
                 .redirects().follow(false)
                 .when()
@@ -667,11 +775,35 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                 .header("Location");
         MultiValueMap<String, String> params = UriComponentsBuilder.fromHttpUrl(location).build().getQueryParams();
 
-        assertTrue(location.startsWith(brokerUrl));
+        assertTrue(location.startsWith(clientUrl));
         String correlationID = params.getFirst("correlationID");
         assertNotNull(correlationID);
         assertEquals("John", params.getFirst("name"));
-        assertEquals("enroll", params.getFirst("step"));
+
+        return doStudentDetails(correlationID);
+    }
+
+    @SuppressWarnings("unchecked")
+    private String doStudentDetails(String correlationID) {
+        Map<String, Object> studentDetailsForm = new HashMap<>();
+        studentDetailsForm.put("correlationID", correlationID);
+        studentDetailsForm.put("opleiding", "Advanced Business Creation (Bachelor)");
+        studentDetailsForm.put("studentnummer", "000019");
+
+        Map<String, Object> result = given()
+                .when()
+                .contentType(ContentType.JSON)
+                .accept(ContentType.JSON)
+                .body(studentDetailsForm)
+                .post("/api/student-details")
+                .as(Map.class);
+
+        String redirect = (String) result.get("redirect");
+        assertTrue(redirect.startsWith(brokerUrl));
+        MultiValueMap<String, String> brokerParams = UriComponentsBuilder.fromHttpUrl(redirect).build().getQueryParams();
+        assertEquals(correlationID, brokerParams.getFirst("correlationID"));
+        assertEquals("enroll", brokerParams.getFirst("step"));
+
         return correlationID;
     }
 

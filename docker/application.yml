@@ -52,6 +52,11 @@ broker:
   password: secret
   service_registry_base_url: "http://localhost:8091"
 
+# URL of the generiek client, used to collect student details (naam, adres, e-mail, telefoon,
+# opleiding, studentnummer) that are missing from the home institution's person data
+client:
+  url: "http://localhost:8094"
+
 # Credentials of the SIS (e.g. Osiris) to check against when
 # reporting back results
 sis:

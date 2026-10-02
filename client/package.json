@@ -1,0 +1,18 @@
+{
+  "private": true,
+  "name": "student-mobility-generiek-client",
+  "version": "0.0.1",
+  "license": "MIT",
+  "type": "module",
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^5.0.1",
+    "sass": "^1.81.1",
+    "svelte": "5.4.0",
+    "vite": "^6.4.1"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  }
+}
