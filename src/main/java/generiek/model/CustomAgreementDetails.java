@@ -56,7 +56,7 @@ public class CustomAgreementDetails implements Serializable {
     private String gastinstellingNaam;
 
     @Column
-    private String gastinstellingDeadline;
+    private LocalDate gastinstellingDeadline;
 
     @Column
     private String faculteit;

@@ -102,6 +102,7 @@ public class CustomAgreementController {
                 .toetsing(details.map(CustomAgreementDetails::getToetsing).orElse(null))
                 .ingangseisen(details.map(CustomAgreementDetails::getIngangseisen).orElse(null))
                 .onderwijsvorm(details.map(CustomAgreementDetails::getOnderwijsvorm).orElse(null))
+                .gastinstellingDeadline(details.map(CustomAgreementDetails::getGastinstellingDeadline).orElse(null))
                 .build();
     }
 

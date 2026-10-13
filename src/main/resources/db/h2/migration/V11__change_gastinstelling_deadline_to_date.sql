@@ -1,0 +1,1 @@
+ALTER TABLE custom_agreement_details ALTER COLUMN gastinstelling_deadline DATE;

@@ -59,6 +59,7 @@ import java.net.URI;
 import java.net.URLEncoder;
 import java.text.ParseException;
 import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -649,12 +650,12 @@ public class EnrollmentEndpoint {
                 .orElseGet(() -> new CustomAgreementDetails(enrollmentRequest));
         putIfPresent(payload, "moduleNaam", details::setModuleNaam);
         putIfPresent(payload, "moduleCode", details::setModuleCode);
-        putIfPresent(payload, "onderwijsperiodeStart", value -> details.setOnderwijsperiodeStart(LocalDate.parse(value)));
-        putIfPresent(payload, "onderwijsperiodeEind", value -> details.setOnderwijsperiodeEind(LocalDate.parse(value)));
+        putDateIfPresent(payload, "onderwijsperiodeStart", details::setOnderwijsperiodeStart);
+        putDateIfPresent(payload, "onderwijsperiodeEind", details::setOnderwijsperiodeEind);
         putIfPresent(payload, "thuisinstellingNaam", details::setThuisinstellingNaam);
         putIfPresent(payload, "gastinstellingNaam", details::setGastinstellingNaam);
         putIfPresent(payload, "faculteit", details::setFaculteit);
-        putIfPresent(payload, "gastinstellingDeadline", details::setGastinstellingDeadline);
+        putDateIfPresent(payload, "gastinstellingDeadline", details::setGastinstellingDeadline);
         putIfPresent(payload, "toetsing", details::setToetsing);
         putIfPresent(payload, "ingangseisen", details::setIngangseisen);
         putIfPresent(payload, "onderwijsvorm", details::setOnderwijsvorm);
@@ -671,6 +672,22 @@ public class EnrollmentEndpoint {
         Object value = payload.get(key);
         if (value instanceof String && StringUtils.hasText((String) value)) {
             setter.accept((String) value);
+        }
+    }
+
+    /*
+     * Same as putIfPresent, but for ISO-8601 date fields: an unparseable value is logged and skipped
+     * rather than failing the whole request, since the broker-supplied date is best-effort metadata.
+     */
+    private void putDateIfPresent(Map<String, Object> payload, String key, java.util.function.Consumer<LocalDate> setter) {
+        Object value = payload.get(key);
+        if (!(value instanceof String) || !StringUtils.hasText((String) value)) {
+            return;
+        }
+        try {
+            setter.accept(LocalDate.parse((String) value));
+        } catch (DateTimeParseException e) {
+            LOG.warn(String.format("Ignoring unparseable date '%s' for field '%s'", value, key), e);
         }
     }
 
