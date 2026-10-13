@@ -693,7 +693,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
                 .auth().basic("user", "secret")
                 .header("X-Correlation-ID", correlationId)
                 .body(komFormEnrollmentPayload)
-                .post("/api/start/kom-form-enrollment")
+                .post("/api/start/broker/manual-enrolment")
                 .as(Map.class);
 
         assertEquals(clientUrl + "?correlationID=" + correlationId, result.get("redirect"));

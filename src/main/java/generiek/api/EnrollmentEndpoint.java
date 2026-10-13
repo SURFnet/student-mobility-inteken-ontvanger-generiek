@@ -83,6 +83,7 @@ public class EnrollmentEndpoint {
     private final ServiceRegistry serviceRegistry;
     private final boolean allowPlayground;
     private final boolean eduIDRequired;
+    private final boolean local;
     private final EnrollmentRepository enrollmentRepository;
     private final AssociationRepository associationRepository;
     private final StudentDetailsRepository studentDetailsRepository;
@@ -106,6 +107,7 @@ public class EnrollmentEndpoint {
                               @Value("${client.url}") String clientUrl,
                               @Value("${features.allow_playground}") boolean allowPlayground,
                               @Value("${features.require_eduid}") boolean eduIDRequired,
+                              @Value("${config.local}") boolean local,
                               @Value("${config.connection_timeout_millis}") int connectionTimeoutMillis,
                               @Value("${config.connection_pool_keep_alive_duration_millis}") int keepAliveDurationMillis,
                               @Value("${config.connection_pool_max_idle_connections}") int maxIdleConnections,
@@ -136,6 +138,7 @@ public class EnrollmentEndpoint {
         this.objectMapper = objectMapper;
         this.allowPlayground = allowPlayground;
         this.eduIDRequired = eduIDRequired;
+        this.local = local;
         // Otherwise, we can't use method PATCH
         OkHttpClient.Builder builder = new OkHttpClient.Builder();
         builder
@@ -194,6 +197,11 @@ public class EnrollmentEndpoint {
             String redirect = String.format("%s?error=%s", brokerUrl, 412);
             return new RedirectView(redirect, false);
         }
+        if (this.local) {
+            LOG.debug("Bypassing SURFconext authorization as 'config.local' is enabled for enrollment request: " + enrollmentRequest);
+            return new RedirectView(buildLocalRedirectURI(enrollmentRequest));
+        }
+
         //Start authorization flow
         String authorizationURI = this.buildAuthorizationURI(enrollmentRequest);
 
@@ -203,47 +211,74 @@ public class EnrollmentEndpoint {
     }
 
     /*
+     * Local-development stand-in for the SURFconext authorization step: skips the real OIDC
+     * provider entirely and sends the browser straight back to our own /redirect_uri with a
+     * synthetic code, carrying the same base64-encoded enrollmentRequest as the state.
+     */
+    private String buildLocalRedirectURI(EnrollmentRequest enrollmentRequest) throws IOException {
+        String state = enrollmentRequest.serializeToBase64(objectMapper);
+        return UriComponentsBuilder.fromUriString(redirectUri)
+                .queryParam("code", "local-bypass")
+                .queryParam("state", state)
+                .build().encode().toUriString();
+    }
+
+    /*
      * Redirect after authentication. Give browser-control back to the client to call start and show progress-spinner
      */
     @Operation(summary = "Redirect after authentication",
             description = "Give browser-control back to the client to call start and show progress-spinne.")
     @GetMapping("/redirect_uri")
     public View redirect(@RequestParam("code") String code, @RequestParam("state") String state) throws ParseException, IOException, BadJOSEException, JOSEException {
-        MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
-        map.add("client_id", clientId);
-        map.add("client_secret", clientSecret);
-        map.add("code", code);
-        map.add("grant_type", "authorization_code");
-        map.add("redirect_uri", redirectUri);
+        String accessToken;
+        String refreshToken;
+        String givenName;
+        String eduid;
 
-        Map<String, Object> body;
-        try {
-            body = tokenRequest(map);
-        } catch (RestClientException e) {
-            LOG.error("Exception in token request", e);
+        if (this.local) {
+            LOG.debug("Bypassing SURFconext token exchange and JWT validation as 'config.local' is enabled");
+            accessToken = "local-access-token";
+            refreshToken = "local-refresh-token";
+            givenName = "Lokale Student";
+            eduid = "local-" + UUID.randomUUID();
+        } else {
+            MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
+            map.add("client_id", clientId);
+            map.add("client_secret", clientSecret);
+            map.add("code", code);
+            map.add("grant_type", "authorization_code");
+            map.add("redirect_uri", redirectUri);
 
-            String redirect = String.format("%s?error=%s", brokerUrl, 417);
-            return new RedirectView(redirect, false);
+            Map<String, Object> body;
+            try {
+                body = tokenRequest(map);
+            } catch (RestClientException e) {
+                LOG.error("Exception in token request", e);
+
+                String redirect = String.format("%s?error=%s", brokerUrl, 417);
+                return new RedirectView(redirect, false);
+            }
+
+            accessToken = (String) body.get("access_token");
+            refreshToken = (String) body.get("refresh_token");
+            String idToken = (String) body.get("id_token");
+
+            jwtValidator.validate(accessToken);
+            JWTClaimsSet claimsSet = jwtValidator.validate(idToken);
+
+            givenName = claimsSet.getStringClaim("given_name");
+            //Very unlikely and why break on this?
+            givenName = StringUtils.hasText(givenName) ? givenName : "Mystery guest";
+            givenName = URLEncoder.encode(givenName, "UTF-8");
+
+            eduid = claimsSet.getStringClaim("eduid");
+            if (!StringUtils.hasText(eduid) && this.eduIDRequired) {
+                LOG.error("eduid is required. Check the ARP for RP:" + this.clientId);
+                String redirect = String.format("%s?error=%s", brokerUrl, 419);
+                return new RedirectView(redirect, false);
+            }
         }
 
-        String accessToken = (String) body.get("access_token");
-        String refreshToken = (String) body.get("refresh_token");
-        String idToken = (String) body.get("id_token");
-
-        jwtValidator.validate(accessToken);
-        JWTClaimsSet claimsSet = jwtValidator.validate(idToken);
-
-        String givenName = claimsSet.getStringClaim("given_name");
-        //Very unlikely and why break on this?
-        givenName = StringUtils.hasText(givenName) ? givenName : "Mystery guest";
-        givenName = URLEncoder.encode(givenName, "UTF-8");
-
-        String eduid = claimsSet.getStringClaim("eduid");
-        if (!StringUtils.hasText(eduid) && this.eduIDRequired) {
-            LOG.error("eduid is required. Check the ARP for RP:" + this.clientId);
-            String redirect = String.format("%s?error=%s", brokerUrl, 419);
-            return new RedirectView(redirect, false);
-        }
         EnrollmentRequest enrollmentRequest;
         try {
             enrollmentRequest = EnrollmentRequest.serializeFromBase64(objectMapper, state);
@@ -603,7 +638,7 @@ public class EnrollmentEndpoint {
             description = "Persists the module/institution data the broker extracted from the program and offering, " +
                     "then returns the URL to redirect the student's browser to so they can fill in any missing " +
                     "details and download the custom agreement PDF.")
-    @PostMapping("/api/start/kom-form-enrollment")
+    @PostMapping("/api/start/broker/manual-enrolment")
     public ResponseEntity<Map<String, Object>> startKomFormEnrollment(
             @RequestHeader("X-Correlation-ID") String correlationId,
             @RequestBody Map<String, Object> payload) {
@@ -620,6 +655,11 @@ public class EnrollmentEndpoint {
         putIfPresent(payload, "onderwijsperiodeEind", value -> details.setOnderwijsperiodeEind(LocalDate.parse(value)));
         putIfPresent(payload, "thuisinstellingNaam", details::setThuisinstellingNaam);
         putIfPresent(payload, "gastinstellingNaam", details::setGastinstellingNaam);
+        putIfPresent(payload, "faculteit", details::setFaculteit);
+        putIfPresent(payload, "gastinstellingDeadline", details::setGastinstellingDeadline);
+        putIfPresent(payload, "toetsing", details::setToetsing);
+        putIfPresent(payload, "ingangseisen", details::setIngangseisen);
+        putIfPresent(payload, "onderwijsvorm", details::setOnderwijsvorm);
         customAgreementDetailsRepository.save(details);
 
         String redirect = String.format("%s?correlationID=%s", clientUrl, enrollmentRequest.getIdentifier());

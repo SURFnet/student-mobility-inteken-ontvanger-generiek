@@ -56,6 +56,21 @@ public class CustomAgreementDetails implements Serializable {
     private String gastinstellingNaam;
 
     @Column
+    private String gastinstellingDeadline;
+
+    @Column
+    private String faculteit;
+
+    @Column
+    private String toetsing;
+
+    @Column
+    private String ingangseisen;
+
+    @Column
+    private String onderwijsvorm;
+
+    @Column
     private Instant created;
 
     public CustomAgreementDetails(EnrollmentRequest enrollmentRequest) {

@@ -98,6 +98,10 @@ public class CustomAgreementController {
                 .onderwijsperiodeEind(details.map(CustomAgreementDetails::getOnderwijsperiodeEind).orElse(null))
                 .thuisinstellingNaam(details.map(CustomAgreementDetails::getThuisinstellingNaam).orElse(null))
                 .gastinstellingNaam(details.map(CustomAgreementDetails::getGastinstellingNaam).orElse(null))
+                .faculteit(details.map(CustomAgreementDetails::getFaculteit).orElse(null))
+                .toetsing(details.map(CustomAgreementDetails::getToetsing).orElse(null))
+                .ingangseisen(details.map(CustomAgreementDetails::getIngangseisen).orElse(null))
+                .onderwijsvorm(details.map(CustomAgreementDetails::getOnderwijsvorm).orElse(null))
                 .build();
     }
 
