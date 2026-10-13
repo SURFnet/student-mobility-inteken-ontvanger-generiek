@@ -45,8 +45,7 @@ spring:
     locations: classpath:db/{vendor}/migration
 
 config:
-  # Set to True to bypass the SURFconext/eduID OIDC round-trip (no redirect to the real
-  # authorization-uri, no token/JWT exchange) and use a synthetic identity instead.
+  # Set to True for tests to bypass the SURFconext/eduID OIDC auth
   # Set to False in every non-local environment.
   local: False
   connection_timeout_millis: 20_000

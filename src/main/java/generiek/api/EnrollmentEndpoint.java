@@ -211,9 +211,7 @@ public class EnrollmentEndpoint {
     }
 
     /*
-     * Local-development stand-in for the SURFconext authorization step: skips the real OIDC
-     * provider entirely and sends the browser straight back to our own /redirect_uri with a
-     * synthetic code, carrying the same base64-encoded enrollmentRequest as the state.
+     * Bypasses conext authentication when tested locally
      */
     private String buildLocalRedirectURI(EnrollmentRequest enrollmentRequest) throws IOException {
         String state = enrollmentRequest.serializeToBase64(objectMapper);
