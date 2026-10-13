@@ -47,7 +47,7 @@ spring:
 config:
   # Set to True for tests to bypass the SURFconext/eduID OIDC auth
   # Set to False in every non-local environment.
-  local: False
+  local: True
   connection_timeout_millis: 20_000
   connection_pool_keep_alive_duration_millis: 300_000
   # Set to 0 to disable connection-pooling. If responses are slow,
