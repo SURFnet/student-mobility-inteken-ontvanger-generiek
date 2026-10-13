@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -31,9 +32,15 @@ public class ServiceRegistry {
 
     @SuppressWarnings("unchecked")
     public Map<String, Boolean> validate(EnrollmentRequest enrollmentRequest) {
+        //Only personURI/homeInstitution (and optionally associationsURI) are ever read on the
+        //receiving end - send just those instead of the whole object, so that serializing any other
+        //field on EnrollmentRequest (e.g. the LocalDate custom-agreement fields) can never break this.
+        Map<String, String> body = new HashMap<>();
+        body.put("personURI", enrollmentRequest.getPersonURI());
+        body.put("homeInstitution", enrollmentRequest.getHomeInstitution());
         return restTemplate.postForEntity(
                 this.serviceRegistryBaseURL + "/api/validate-service-registry-endpoints",
-                new HttpEntity<>(enrollmentRequest),
+                new HttpEntity<>(body),
                 Map.class).getBody();
     }
 

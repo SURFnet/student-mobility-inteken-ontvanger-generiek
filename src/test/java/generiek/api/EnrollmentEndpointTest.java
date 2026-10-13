@@ -33,10 +33,14 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URLDecoder;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.*;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
@@ -712,6 +716,127 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
             String text = new PDFTextStripper().getText(document);
             assertTrue(text.contains("Data Science for Society"));
             assertTrue(text.contains("DSS-2026"));
+            assertTrue(text.contains("Universiteit van Harderwijk"));
+            assertTrue(text.contains("Hogeschool Inholland"));
+        }
+    }
+
+    /*
+     * End-to-end from the point the broker's /api/broker/manual-enrolment hands off to generiek
+     * (POST /api/start/broker/manual-enrolment, exactly as broker's own BrokerControllerTest.komFormEnrollment
+     * asserts it sends) through to the generated leerovereenkomst PDF, covering every custom-agreement field:
+     * the course/program-expansion fields (faculteit, toetsing, ingangseisen, onderwijsvorm) and the
+     * organization/academicSession-derived gastinstellingDeadline date.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void brokerManualEnrolmentWithAllCustomAgreementFieldsReachesPdf() throws Exception {
+        String state = doAuthorize(PersonAuthentication.HEADER.name());
+        String correlationId = doToken(state);
+
+        Map<String, String> komFormEnrollmentPayload = new HashMap<>();
+        komFormEnrollmentPayload.put("moduleNaam", "Quantum Computing Foundations");
+        komFormEnrollmentPayload.put("moduleCode", "QCF-2026");
+        komFormEnrollmentPayload.put("onderwijsperiodeStart", "2026-09-01");
+        komFormEnrollmentPayload.put("onderwijsperiodeEind", "2027-01-31");
+        komFormEnrollmentPayload.put("thuisinstellingNaam", "Universiteit van Harderwijk");
+        komFormEnrollmentPayload.put("gastinstellingNaam", "Hogeschool Inholland");
+        komFormEnrollmentPayload.put("faculteit", "Creative Business");
+        komFormEnrollmentPayload.put("toetsing", "Presentations and written exam");
+        komFormEnrollmentPayload.put("ingangseisen", "Completed first-year mathematics");
+        komFormEnrollmentPayload.put("onderwijsvorm", "Voltijd");
+        komFormEnrollmentPayload.put("gastinstellingDeadline", "2026-11-09");
+
+        Map result = given()
+                .when()
+                .contentType(ContentType.JSON)
+                .accept(ContentType.JSON)
+                .auth().basic("user", "secret")
+                .header("X-Correlation-ID", correlationId)
+                .body(komFormEnrollmentPayload)
+                .post("/api/start/broker/manual-enrolment")
+                .as(Map.class);
+
+        assertEquals(clientUrl + "?correlationID=" + correlationId, result.get("redirect"));
+
+        byte[] pdf = given()
+                .when()
+                .queryParam("correlationID", correlationId)
+                .get("/api/leerovereenkomst")
+                .then()
+                .statusCode(200)
+                .contentType("application/pdf")
+                .extract()
+                .asByteArray();
+
+        assertTrue(pdf.length > 0);
+
+        //create the pdf in target to check generateed pdf
+        Files.write(Paths.get("target/leerovereenkomst-sample.pdf"), pdf);
+
+        try (PDDocument document = PDDocument.load(pdf)) {
+            String text = new PDFTextStripper().getText(document);
+
+            assertTrue(text.contains("Quantum Computing Foundations"));
+            assertTrue(text.contains("QCF-2026"));
+
+            assertTrue(text.contains("Creative Business"));
+            assertTrue(text.contains("Voltijd"));
+            assertTrue(text.contains("Completed first-year mathematics"));
+            assertTrue(text.contains("Presentations and written exam"));
+
+            assertTrue(text.contains("Universiteit van Harderwijk"));
+            assertTrue(text.contains("Hogeschool Inholland"));
+            String expectedMonthYear = DateTimeFormatter.ofPattern("MMMM yyyy", new Locale("nl"))
+                    .format(LocalDate.parse("2026-11-09"));
+            assertTrue(text.contains(expectedMonthYear));
+        }
+    }
+
+    /*
+     * A malformed date from the broker must degrade gracefully (field skipped, logged) rather than
+     * failing the whole /api/start/broker/manual-enrolment call - see putDateIfPresent.
+     */
+    @Test
+    void brokerManualEnrolmentIgnoresUnparseableDatesWithoutFailingTheRequest() throws Exception {
+        String state = doAuthorize(PersonAuthentication.HEADER.name());
+        String correlationId = doToken(state);
+
+        Map<String, String> komFormEnrollmentPayload = new HashMap<>();
+        komFormEnrollmentPayload.put("moduleNaam", "Data Science for Society");
+        komFormEnrollmentPayload.put("onderwijsperiodeStart", "not-a-date");
+        komFormEnrollmentPayload.put("gastinstellingDeadline", "31-02-2026");
+        komFormEnrollmentPayload.put("thuisinstellingNaam", "Universiteit van Harderwijk");
+        komFormEnrollmentPayload.put("gastinstellingNaam", "Hogeschool Inholland");
+
+        given()
+                .when()
+                .contentType(ContentType.JSON)
+                .accept(ContentType.JSON)
+                .auth().basic("user", "secret")
+                .header("X-Correlation-ID", correlationId)
+                .body(komFormEnrollmentPayload)
+                .post("/api/start/broker/manual-enrolment")
+                .then()
+                .statusCode(200)
+                .body("redirect", equalTo(clientUrl + "?correlationID=" + correlationId));
+
+        byte[] pdf = given()
+                .when()
+                .queryParam("correlationID", correlationId)
+                .get("/api/leerovereenkomst")
+                .then()
+                .statusCode(200)
+                .contentType("application/pdf")
+                .extract()
+                .asByteArray();
+
+        assertTrue(pdf.length > 0);
+
+        try (PDDocument document = PDDocument.load(pdf)) {
+            String text = new PDFTextStripper().getText(document);
+            //The valid fields alongside the two bad dates still made it through
+            assertTrue(text.contains("Data Science for Society"));
             assertTrue(text.contains("Universiteit van Harderwijk"));
             assertTrue(text.contains("Hogeschool Inholland"));
         }

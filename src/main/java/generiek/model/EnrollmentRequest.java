@@ -100,6 +100,22 @@ public class EnrollmentRequest implements Serializable {
     @Transient
     private String gastinstellingNaam;
 
+    @Transient
+    private String faculteit;
+
+    @Transient
+    private String toetsing;
+
+    @Transient
+    private String ingangseisen;
+
+    @Transient
+    private String onderwijsvorm;
+
+    @Transient
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+    private LocalDate gastinstellingDeadline;
+
     public EnrollmentRequest(EnrollmentRequest enrollmentRequest) {
         validate(enrollmentRequest);
         this.personURI = enrollmentRequest.personURI;
@@ -112,6 +128,11 @@ public class EnrollmentRequest implements Serializable {
         this.onderwijsperiodeEind = enrollmentRequest.onderwijsperiodeEind;
         this.thuisinstellingNaam = enrollmentRequest.thuisinstellingNaam;
         this.gastinstellingNaam = enrollmentRequest.gastinstellingNaam;
+        this.faculteit = enrollmentRequest.faculteit;
+        this.toetsing = enrollmentRequest.toetsing;
+        this.ingangseisen = enrollmentRequest.ingangseisen;
+        this.onderwijsvorm = enrollmentRequest.onderwijsvorm;
+        this.gastinstellingDeadline = enrollmentRequest.gastinstellingDeadline;
         this.setIdentifier(UUID.randomUUID().toString());
         this.setCreated(Instant.now());
     }
@@ -135,6 +156,11 @@ public class EnrollmentRequest implements Serializable {
         putIfHasText(result, "oe", this.onderwijsperiodeEind == null ? null : this.onderwijsperiodeEind.toString());
         putIfHasText(result, "tn", this.thuisinstellingNaam);
         putIfHasText(result, "gn", this.gastinstellingNaam);
+        putIfHasText(result, "fc", this.faculteit);
+        putIfHasText(result, "ts", this.toetsing);
+        putIfHasText(result, "ie", this.ingangseisen);
+        putIfHasText(result, "ov", this.onderwijsvorm);
+        putIfHasText(result, "gd", this.gastinstellingDeadline == null ? null : this.gastinstellingDeadline.toString());
         byte[] bytes = objectMapper.writeValueAsBytes(result);
 
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -183,6 +209,11 @@ public class EnrollmentRequest implements Serializable {
         enrollmentRequest.setOnderwijsperiodeEind(map.get("oe") == null ? null : LocalDate.parse(map.get("oe")));
         enrollmentRequest.setThuisinstellingNaam(map.get("tn"));
         enrollmentRequest.setGastinstellingNaam(map.get("gn"));
+        enrollmentRequest.setFaculteit(map.get("fc"));
+        enrollmentRequest.setToetsing(map.get("ts"));
+        enrollmentRequest.setIngangseisen(map.get("ie"));
+        enrollmentRequest.setOnderwijsvorm(map.get("ov"));
+        enrollmentRequest.setGastinstellingDeadline(map.get("gd") == null ? null : LocalDate.parse(map.get("gd")));
         enrollmentRequest.setIdentifier(UUID.randomUUID().toString());
         enrollmentRequest.setCreated(Instant.now());
 

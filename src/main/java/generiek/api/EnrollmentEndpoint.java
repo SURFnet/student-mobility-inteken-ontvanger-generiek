@@ -238,7 +238,7 @@ public class EnrollmentEndpoint {
             LOG.debug("Bypassing SURFconext token exchange and JWT validation as 'config.local' is enabled");
             accessToken = "local-access-token";
             refreshToken = "local-refresh-token";
-            givenName = "Lokale Student";
+            givenName = URLEncoder.encode("Lokale Student", "UTF-8");
             eduid = "local-" + UUID.randomUUID();
         } else {
             MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
@@ -411,7 +411,12 @@ public class EnrollmentEndpoint {
                 || enrollmentRequest.getOnderwijsperiodeStart() != null
                 || enrollmentRequest.getOnderwijsperiodeEind() != null
                 || StringUtils.hasText(enrollmentRequest.getThuisinstellingNaam())
-                || StringUtils.hasText(enrollmentRequest.getGastinstellingNaam());
+                || StringUtils.hasText(enrollmentRequest.getGastinstellingNaam())
+                || StringUtils.hasText(enrollmentRequest.getFaculteit())
+                || StringUtils.hasText(enrollmentRequest.getToetsing())
+                || StringUtils.hasText(enrollmentRequest.getIngangseisen())
+                || StringUtils.hasText(enrollmentRequest.getOnderwijsvorm())
+                || enrollmentRequest.getGastinstellingDeadline() != null;
         if (!hasCarriedData) {
             return;
         }
@@ -422,6 +427,11 @@ public class EnrollmentEndpoint {
         details.setOnderwijsperiodeEind(enrollmentRequest.getOnderwijsperiodeEind());
         details.setThuisinstellingNaam(enrollmentRequest.getThuisinstellingNaam());
         details.setGastinstellingNaam(enrollmentRequest.getGastinstellingNaam());
+        details.setFaculteit(enrollmentRequest.getFaculteit());
+        details.setToetsing(enrollmentRequest.getToetsing());
+        details.setIngangseisen(enrollmentRequest.getIngangseisen());
+        details.setOnderwijsvorm(enrollmentRequest.getOnderwijsvorm());
+        details.setGastinstellingDeadline(enrollmentRequest.getGastinstellingDeadline());
         customAgreementDetailsRepository.save(details);
     }
 
