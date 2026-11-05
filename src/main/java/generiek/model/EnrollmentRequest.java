@@ -69,6 +69,11 @@ public class EnrollmentRequest implements Serializable {
     private String scope;
 
     @Column
+    @Schema(description = "The alliance if specified",
+            example = "euroteq")
+    private String alliance;
+
+    @Column
     private Instant created;
 
     public EnrollmentRequest(EnrollmentRequest enrollmentRequest) {
@@ -77,6 +82,7 @@ public class EnrollmentRequest implements Serializable {
         this.personAuth = enrollmentRequest.personAuth;
         this.homeInstitution = enrollmentRequest.homeInstitution;
         this.scope = enrollmentRequest.scope;
+        this.alliance = enrollmentRequest.alliance;
         this.setIdentifier(UUID.randomUUID().toString());
         this.setCreated(Instant.now());
     }
@@ -94,6 +100,7 @@ public class EnrollmentRequest implements Serializable {
         result.put("h", this.homeInstitution);
         result.put("p", this.personURI);
         result.put("s", this.scope);
+        result.put("al", this.alliance);
         byte[] bytes = objectMapper.writeValueAsBytes(result);
 
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -115,6 +122,7 @@ public class EnrollmentRequest implements Serializable {
                 ", accessToken=" + StringUtils.hasText(this.getAccessToken()) +
                 ", refreshToken=" + StringUtils.hasText(this.getRefreshToken()) +
                 ", scope=" + this.getScope() +
+                ", alliance=" + this.getAlliance() +
                 ", created=" + this.getCreated() + ")";
     }
 
@@ -136,6 +144,7 @@ public class EnrollmentRequest implements Serializable {
         enrollmentRequest.setHomeInstitution(map.get("h"));
         enrollmentRequest.setPersonURI(map.get("p"));
         enrollmentRequest.setScope(map.get("s"));
+        enrollmentRequest.setAlliance(map.get("al"));
         enrollmentRequest.setIdentifier(UUID.randomUUID().toString());
         enrollmentRequest.setCreated(Instant.now());
 

@@ -485,6 +485,7 @@ public class EnrollmentEndpoint {
         }
         LOG.debug(String.format("Posting association endpoint for personId %s and enrolment request %s to %s", personId, enrollmentRequest, associationURI));
 
+        EnrollmentAssociation.addAllianceConsumer(association, enrollmentRequest);
         ResponseEntity<Map<String, Object>> responseEntity = exchangeToHomeInstitution(enrollmentRequest, association, associationURI, HttpMethod.POST, false, true);
         if (HttpStatus.CREATED.equals(responseEntity.getStatusCode())) {
             String associationId = (String) responseEntity.getBody().get("associationId");
@@ -516,6 +517,11 @@ public class EnrollmentEndpoint {
                                     "    \"score\": \"9\",\n" +
                                     "    \"resultDate\": \"2020-09-28\",\n" +
                                     "    \"weight\": 100\n" +
+                                    "  },\n" +
+                                    "  \"consumers\": {\n" +
+                                    "    \"alliance\": {\n" +
+                                    "      \"name\": \"euroteq\"\n" +
+                                    "    }\n" +
                                     "  }\n" +
                                     "}"
                     )
