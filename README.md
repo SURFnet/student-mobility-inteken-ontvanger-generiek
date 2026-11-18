@@ -10,13 +10,13 @@ cross-institution registrations.
 
 ### [System Requirements](#system-requirements)
 
-- Java 8
+- Java 21
 - Maven 3
 
 Set the JAVA_HOME property for maven (example for macOS):
 
 ```shell
-export JAVA_HOME=/Library/Java/JavaVirtualMachines/adoptopenjdk-8.jdk/Contents/Home/
+export JAVA_HOME=/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home
 ```
 
 ## [Building and running](#building-and-running)
