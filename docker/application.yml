@@ -20,7 +20,7 @@ spring:
     properties:
       hibernate:
         naming-strategy: org.hibernate.cfg.ImprovedNamingStrategy
-        # dialect: org.hibernate.dialect.PostgreSQL10Dialect
+        # dialect: org.hibernate.dialect.PostgreSQLDialect
         dialect: org.hibernate.dialect.H2Dialect
     open-in-view: false
   datasource:
