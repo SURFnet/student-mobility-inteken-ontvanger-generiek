@@ -1,96 +1,82 @@
 package generiek;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.scheduling.annotation.EnableScheduling;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.ProviderManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
 @EnableScheduling
 @EnableWebSecurity
 public class SecurityConfiguration {
 
+    @Value("${broker.user}")
+    private String brokerUser;
+
+    @Value("${broker.password}")
+    private String brokerPassword;
+
+    @Value("${sis.user}")
+    private String sisUser;
+
+    @Value("${sis.password}")
+    private String sisPassword;
+
     @Order(1)
-    @Configuration
-    public static class BrokerSecurityConfigurationAdapter extends WebSecurityConfigurerAdapter {
+    @Bean
+    public SecurityFilterChain brokerSecurityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .securityMatcher("/api/start")
+                .csrf(AbstractHttpConfigurer::disable)
+                .authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated())
+                .httpBasic(Customizer.withDefaults())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authenticationManager(authenticationManager(brokerUser, brokerPassword));
 
-        @Value("${broker.user}")
-        private String brokerUser;
-
-        @Value("${broker.password}")
-        private String brokerPassword;
-
-        @Override
-        protected void configure(HttpSecurity http) throws Exception {
-            http.requestMatchers()
-                    .antMatchers("/api/start")
-                    .and()
-                    .csrf()
-                    .disable()
-                    .authorizeRequests()
-                    .anyRequest()
-                    .authenticated()
-                    .and()
-                    .httpBasic()
-                    .and()
-                    .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
-        }
-
-        @Override
-        protected void configure(AuthenticationManagerBuilder auth) throws Exception {
-            auth
-                    .inMemoryAuthentication()
-                    .withUser(brokerUser)
-                    .password("{noop}" + brokerPassword)
-                    .roles("BROKER");
-        }
-
+        return http.build();
     }
 
-    @Order
-    @Configuration
-    public static class SISSecurityConfigurationAdapter extends WebSecurityConfigurerAdapter {
+    @Order(2)
+    @Bean
+    public SecurityFilterChain sisSecurityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .securityMatcher(
+                        "/api/results",
+                        "/associations/**",
+                        "/api/play-results",
+                        "/api/me",
+                        "/person/**")
+                .csrf(AbstractHttpConfigurer::disable)
+                .authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated())
+                .httpBasic(Customizer.withDefaults())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authenticationManager(authenticationManager(sisUser, sisPassword));
 
-        @Value("${sis.user}")
-        private String sisUser;
+        return http.build();
+    }
 
-        @Value("${sis.password}")
-        private String sisPassword;
+    private AuthenticationManager authenticationManager(String user, String password) {
+        InMemoryUserDetailsManager userDetailsService = new InMemoryUserDetailsManager(
+                User.withUsername(user)
+                        .password("{noop}" + password)
+                        .roles("BROKER")
+                        .build());
 
-        @Override
-        protected void configure(HttpSecurity http) throws Exception {
-            http.requestMatchers()
-                    .antMatchers(
-                            "/api/results",
-                            "/associations/**",
-                            "/api/play-results",
-                            "/api/me",
-                            "/person/**")
-                    .and()
-                    .csrf()
-                    .disable()
-                    .authorizeRequests()
-                    .anyRequest()
-                    .authenticated()
-                    .and()
-                    .httpBasic()
-                    .and()
-                    .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
-        }
+        DaoAuthenticationProvider authenticationProvider = new DaoAuthenticationProvider();
+        authenticationProvider.setUserDetailsService(userDetailsService);
 
-        @Override
-        protected void configure(AuthenticationManagerBuilder auth) throws Exception {
-            auth
-                    .inMemoryAuthentication()
-                    .withUser(sisUser)
-                    .password("{noop}" + sisPassword)
-                    .roles("BROKER");
-        }
-
+        return new ProviderManager(authenticationProvider);
     }
 }

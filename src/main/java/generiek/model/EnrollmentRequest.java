@@ -9,7 +9,7 @@ import lombok.Setter;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
