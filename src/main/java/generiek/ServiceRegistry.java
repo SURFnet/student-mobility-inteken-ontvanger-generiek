@@ -43,7 +43,7 @@ public class ServiceRegistry {
                 this.serviceRegistryBaseURL + "/api/associations-uri",
                 new HttpEntity<>(Collections.singletonMap("homeInstitution", enrollmentRequest.getHomeInstitution())),
                 Map.class).getBody();
-        return results.get("associationsURI");
+        return trimTrailingSlash(results.get("associationsURI"));
     }
 
     @SuppressWarnings("unchecked")
@@ -52,10 +52,14 @@ public class ServiceRegistry {
                 this.serviceRegistryBaseURL + "/api/persons-uri",
                 new HttpEntity<>(Collections.singletonMap("homeInstitution", enrollmentRequest.getHomeInstitution())),
                 Map.class).getBody();
-        return results.get("personsURI");
+        return trimTrailingSlash(results.get("personsURI"));
     }
 
     public String getServiceRegistryBaseURL() {
         return serviceRegistryBaseURL;
+    }
+
+    private static String trimTrailingSlash(String value) {
+        return value == null ? null : value.replaceAll("/+$", "");
     }
 }
