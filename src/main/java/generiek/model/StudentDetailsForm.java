@@ -14,10 +14,10 @@ public class StudentDetailsForm {
     @Schema(example = "550e8400-e29b-41d4-a716-446655440000", required = true)
     private String correlationID;
 
-    @Schema(example = "AHR (Ruth) Bootsma")
+    @Schema(example = "PF (Frans) Thomese")
     private String naam;
 
-    @Schema(example = "Julianastraat 38, 3911 HK Rhenen")
+    @Schema(example = "Kalverstraat, 1234 AB Amsterdam")
     private String adres;
 
     @Schema(example = "ruthbootsmasurfnl@example.com")
