@@ -39,6 +39,8 @@ config:
   # Set to 0 to disable connection-pooling. If responses are slow,
   # connection-pooling does not matter anyway
   connection_pool_max_idle_connections: 256
+  # URL of the external catalog (eduXchange) to link back to from the client's header
+  catalog_url: "http://educhange.nl/"
 
 features:
   # Do we allow to mock the different scenario's - only allow on test

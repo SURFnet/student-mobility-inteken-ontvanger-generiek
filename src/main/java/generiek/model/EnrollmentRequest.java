@@ -104,6 +104,9 @@ public class EnrollmentRequest implements Serializable {
     private String faculteit;
 
     @Transient
+    private String beschrijving;
+
+    @Transient
     private String toetsing;
 
     @Transient
@@ -113,8 +116,31 @@ public class EnrollmentRequest implements Serializable {
     private String onderwijsvorm;
 
     @Transient
+    private Double aantalEc;
+
+    @Transient
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
     private LocalDate gastinstellingDeadline;
+
+    // Guest institution's organization address, carried through for later implementation
+    // (not yet persisted onto CustomAgreementDetails or rendered on the PDF).
+    @Transient
+    private String addressType;
+
+    @Transient
+    private String street;
+
+    @Transient
+    private String streetNumber;
+
+    @Transient
+    private String postalCode;
+
+    @Transient
+    private String city;
+
+    @Transient
+    private String countryCode;
 
     public EnrollmentRequest(EnrollmentRequest enrollmentRequest) {
         validate(enrollmentRequest);
@@ -129,10 +155,18 @@ public class EnrollmentRequest implements Serializable {
         this.thuisinstellingNaam = enrollmentRequest.thuisinstellingNaam;
         this.gastinstellingNaam = enrollmentRequest.gastinstellingNaam;
         this.faculteit = enrollmentRequest.faculteit;
+        this.beschrijving = enrollmentRequest.beschrijving;
         this.toetsing = enrollmentRequest.toetsing;
         this.ingangseisen = enrollmentRequest.ingangseisen;
         this.onderwijsvorm = enrollmentRequest.onderwijsvorm;
+        this.aantalEc = enrollmentRequest.aantalEc;
         this.gastinstellingDeadline = enrollmentRequest.gastinstellingDeadline;
+        this.addressType = enrollmentRequest.addressType;
+        this.street = enrollmentRequest.street;
+        this.streetNumber = enrollmentRequest.streetNumber;
+        this.postalCode = enrollmentRequest.postalCode;
+        this.city = enrollmentRequest.city;
+        this.countryCode = enrollmentRequest.countryCode;
         this.setIdentifier(UUID.randomUUID().toString());
         this.setCreated(Instant.now());
     }
@@ -157,10 +191,18 @@ public class EnrollmentRequest implements Serializable {
         putIfHasText(result, "tn", this.thuisinstellingNaam);
         putIfHasText(result, "gn", this.gastinstellingNaam);
         putIfHasText(result, "fc", this.faculteit);
+        putIfHasText(result, "bs", this.beschrijving);
         putIfHasText(result, "ts", this.toetsing);
         putIfHasText(result, "ie", this.ingangseisen);
         putIfHasText(result, "ov", this.onderwijsvorm);
+        putIfHasText(result, "ec", this.aantalEc == null ? null : String.valueOf(this.aantalEc));
         putIfHasText(result, "gd", this.gastinstellingDeadline == null ? null : this.gastinstellingDeadline.toString());
+        putIfHasText(result, "at", this.addressType);
+        putIfHasText(result, "sr", this.street);
+        putIfHasText(result, "sn", this.streetNumber);
+        putIfHasText(result, "pc", this.postalCode);
+        putIfHasText(result, "ci", this.city);
+        putIfHasText(result, "cc", this.countryCode);
         byte[] bytes = objectMapper.writeValueAsBytes(result);
 
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -210,10 +252,18 @@ public class EnrollmentRequest implements Serializable {
         enrollmentRequest.setThuisinstellingNaam(map.get("tn"));
         enrollmentRequest.setGastinstellingNaam(map.get("gn"));
         enrollmentRequest.setFaculteit(map.get("fc"));
+        enrollmentRequest.setBeschrijving(map.get("bs"));
         enrollmentRequest.setToetsing(map.get("ts"));
         enrollmentRequest.setIngangseisen(map.get("ie"));
         enrollmentRequest.setOnderwijsvorm(map.get("ov"));
+        enrollmentRequest.setAantalEc(map.get("ec") == null ? null : Double.valueOf(map.get("ec")));
         enrollmentRequest.setGastinstellingDeadline(map.get("gd") == null ? null : LocalDate.parse(map.get("gd")));
+        enrollmentRequest.setAddressType(map.get("at"));
+        enrollmentRequest.setStreet(map.get("sr"));
+        enrollmentRequest.setStreetNumber(map.get("sn"));
+        enrollmentRequest.setPostalCode(map.get("pc"));
+        enrollmentRequest.setCity(map.get("ci"));
+        enrollmentRequest.setCountryCode(map.get("cc"));
         enrollmentRequest.setIdentifier(UUID.randomUUID().toString());
         enrollmentRequest.setCreated(Instant.now());
 

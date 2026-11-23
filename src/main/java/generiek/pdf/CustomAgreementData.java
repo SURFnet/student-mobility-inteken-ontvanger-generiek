@@ -80,6 +80,9 @@ public class CustomAgreementData {
     @Schema(example = "Creative Business")
     private String faculteit;
 
+    @Schema(example = "Een introductie in de biologie voor eerstejaars studenten.")
+    private String beschrijving;
+
     @Schema(example = "Voltijd")
     private String onderwijsvorm;
 

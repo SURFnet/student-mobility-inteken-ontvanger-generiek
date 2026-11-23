@@ -19,6 +19,10 @@ function fetchJson(path, options = {}) {
     return fetch(`${API_BASE}${path}`, options).then(validateResponse);
 }
 
+export function features() {
+    return fetchJson("/api/features");
+}
+
 export function studentDetails(correlationID) {
     return fetchJson(`/api/student-details?correlationID=${encodeURIComponent(correlationID)}`);
 }

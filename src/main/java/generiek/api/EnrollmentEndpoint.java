@@ -62,6 +62,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -71,6 +72,8 @@ import java.util.stream.Stream;
 public class EnrollmentEndpoint {
 
     private static final Log LOG = LogFactory.getLog(EnrollmentEndpoint.class);
+
+    private static final String EDUXCHANGE_URL = "https://eduxchange.nl/";
 
     private final String acr;
     private final String clientId;
@@ -307,12 +310,10 @@ public class EnrollmentEndpoint {
             return new RedirectView(detailsRedirect, false);
         }
 
-        String redirect = String.format("%s?step=enroll&correlationID=%s&name=%s",
-                brokerUrl, enrollmentRequest.getIdentifier(), givenName);
+        LOG.debug(String.format("No missing student details for enrollmentRequest %s, redirecting to %s",
+                enrollmentRequest, EDUXCHANGE_URL));
 
-        LOG.debug(String.format("Redirecting back to %s client after authorization", redirect));
-
-        return new RedirectView(redirect, false);
+        return new RedirectView(EDUXCHANGE_URL, false);
     }
 
     /*
@@ -337,7 +338,7 @@ public class EnrollmentEndpoint {
      * Called by the generiek client to persist the student details the student filled in by hand
      */
     @Operation(summary = "Submit student details",
-            description = "Persists the student-supplied details and returns the URL to redirect back to the broker.")
+            description = "Persists the student-supplied details.")
     @CrossOrigin(origins = "${client.url}")
     @PostMapping("/api/student-details")
     public ResponseEntity<Map<String, Object>> submitStudentDetails(@RequestBody StudentDetailsForm form) {
@@ -356,13 +357,7 @@ public class EnrollmentEndpoint {
         studentDetails.setStudentnummer(blankToNull(form.getStudentnummer()));
         studentDetailsRepository.save(studentDetails);
 
-        String givenName = StringUtils.hasText(form.getNaam()) ? form.getNaam() : "Mystery guest";
-        String redirect = String.format("%s?step=enroll&correlationID=%s&name=%s",
-                brokerUrl, enrollmentRequest.getIdentifier(), URLEncoder.encode(givenName, java.nio.charset.StandardCharsets.UTF_8));
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("redirect", redirect);
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(Map.of());
     }
 
     /*
@@ -413,9 +408,11 @@ public class EnrollmentEndpoint {
                 || StringUtils.hasText(enrollmentRequest.getThuisinstellingNaam())
                 || StringUtils.hasText(enrollmentRequest.getGastinstellingNaam())
                 || StringUtils.hasText(enrollmentRequest.getFaculteit())
+                || StringUtils.hasText(enrollmentRequest.getBeschrijving())
                 || StringUtils.hasText(enrollmentRequest.getToetsing())
                 || StringUtils.hasText(enrollmentRequest.getIngangseisen())
                 || StringUtils.hasText(enrollmentRequest.getOnderwijsvorm())
+                || enrollmentRequest.getAantalEc() != null
                 || enrollmentRequest.getGastinstellingDeadline() != null;
         if (!hasCarriedData) {
             return;
@@ -428,9 +425,11 @@ public class EnrollmentEndpoint {
         details.setThuisinstellingNaam(enrollmentRequest.getThuisinstellingNaam());
         details.setGastinstellingNaam(enrollmentRequest.getGastinstellingNaam());
         details.setFaculteit(enrollmentRequest.getFaculteit());
+        details.setBeschrijving(enrollmentRequest.getBeschrijving());
         details.setToetsing(enrollmentRequest.getToetsing());
         details.setIngangseisen(enrollmentRequest.getIngangseisen());
         details.setOnderwijsvorm(enrollmentRequest.getOnderwijsvorm());
+        details.setAantalEc(enrollmentRequest.getAantalEc());
         details.setGastinstellingDeadline(enrollmentRequest.getGastinstellingDeadline());
         customAgreementDetailsRepository.save(details);
     }
@@ -665,10 +664,12 @@ public class EnrollmentEndpoint {
         putIfPresent(payload, "thuisinstellingNaam", details::setThuisinstellingNaam);
         putIfPresent(payload, "gastinstellingNaam", details::setGastinstellingNaam);
         putIfPresent(payload, "faculteit", details::setFaculteit);
+        putIfPresent(payload, "beschrijving", details::setBeschrijving);
         putDateIfPresent(payload, "gastinstellingDeadline", details::setGastinstellingDeadline);
         putIfPresent(payload, "toetsing", details::setToetsing);
         putIfPresent(payload, "ingangseisen", details::setIngangseisen);
         putIfPresent(payload, "onderwijsvorm", details::setOnderwijsvorm);
+        putDoubleIfPresent(payload, "aantalEc", details::setAantalEc);
         customAgreementDetailsRepository.save(details);
 
         String redirect = String.format("%s?correlationID=%s", clientUrl, enrollmentRequest.getIdentifier());
@@ -678,7 +679,10 @@ public class EnrollmentEndpoint {
         return ResponseEntity.ok(result);
     }
 
-    private void putIfPresent(Map<String, Object> payload, String key, java.util.function.Consumer<String> setter) {
+    /*
+     * Set fields if present for manual enrolment
+     */
+    private void putIfPresent(Map<String, Object> payload, String key, Consumer<String> setter) {
         Object value = payload.get(key);
         if (value instanceof String && StringUtils.hasText((String) value)) {
             setter.accept((String) value);
@@ -686,10 +690,9 @@ public class EnrollmentEndpoint {
     }
 
     /*
-     * Same as putIfPresent, but for ISO-8601 date fields: an unparseable value is logged and skipped
-     * rather than failing the whole request, since the broker-supplied date is best-effort metadata.
+     * If Date is unparsable, log the event but don't make it a show stopper, ignore the date
      */
-    private void putDateIfPresent(Map<String, Object> payload, String key, java.util.function.Consumer<LocalDate> setter) {
+    private void putDateIfPresent(Map<String, Object> payload, String key, Consumer<LocalDate> setter) {
         Object value = payload.get(key);
         if (!(value instanceof String) || !StringUtils.hasText((String) value)) {
             return;
@@ -698,6 +701,21 @@ public class EnrollmentEndpoint {
             setter.accept(LocalDate.parse((String) value));
         } catch (DateTimeParseException e) {
             LOG.warn(String.format("Ignoring unparseable date '%s' for field '%s'", value, key), e);
+        }
+    }
+
+    /*
+     * If the number is unparsable, log the event but don't make it a show stopper, ignore it
+     */
+    private void putDoubleIfPresent(Map<String, Object> payload, String key, Consumer<Double> setter) {
+        Object value = payload.get(key);
+        if (!(value instanceof String) || !StringUtils.hasText((String) value)) {
+            return;
+        }
+        try {
+            setter.accept(Double.valueOf((String) value));
+        } catch (NumberFormatException e) {
+            LOG.warn(String.format("Ignoring unparseable number '%s' for field '%s'", value, key), e);
         }
     }
 

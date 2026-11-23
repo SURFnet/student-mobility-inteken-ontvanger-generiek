@@ -1,4 +1,6 @@
 export default {
+    header: "Registration",
+    backToEduXchange: "← back to eduXchange",
     title: "A few more details",
     intro: "Your home institution did not provide all the details needed to complete your enrollment. " +
         "Please fill in the details below.",
@@ -15,7 +17,7 @@ export default {
         adres: "Street and number, postal code and city",
         email: "name@example.com",
         telefoon: "+31612345678",
-        opleiding: "E.g. Advanced Business Creation (Bachelor)",
+        opleiding: "E.g. Psychology (Bachelor)",
         studentnummer: "E.g. 000019"
     },
     required: "This field is required",
@@ -24,8 +26,8 @@ export default {
     submitting: "Generating…",
     error: "Something went wrong. Please try again later or contact your institution.",
     readyTitle: "Your learning agreement is ready",
-    readyIntro: "Download the learning agreement, sign it and send it to the guest institution. " +
-        "Then click 'Continue' to complete your enrollment.",
+    readyIntro: "The learning agreement has been sent to you by email",
+    readyToDos: ["Sign the learning agreement yourself", "Have it signed by your home institution", "Send it to your guest institution"],
     download: "Download PDF",
     continue: "Continue"
 };

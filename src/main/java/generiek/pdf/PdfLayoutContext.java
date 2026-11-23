@@ -65,6 +65,16 @@ class PdfLayoutContext implements AutoCloseable {
         }
     }
 
+    /**
+     * Breaks to a new page unless the cursor is already at the top of a fresh one, so callers
+     * can force a section to always start on its own page without ever emitting a blank one.
+     */
+    void forceNewPage() throws IOException {
+        if (cursorY != PAGE_HEIGHT - MARGIN) {
+            newPage();
+        }
+    }
+
     float cursorY() {
         return cursorY;
     }

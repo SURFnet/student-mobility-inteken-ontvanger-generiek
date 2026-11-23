@@ -15,6 +15,9 @@
     <description>inteken-ontvanger-generiek</description>
     <properties>
         <java.version>21</java.version>
+        <!-- spring-boot-starter-parent 2.7.18 pins 1.18.30, which predates this JDK and silently
+             produces no annotation-processor output under it -->
+        <lombok.version>1.18.46</lombok.version>
     </properties>
     <dependencies>
         <dependency>
@@ -143,6 +146,13 @@
                 <version>3.13.0</version>
                 <configuration>
                     <release>21</release>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
                 </configuration>
             </plugin>
             <plugin>

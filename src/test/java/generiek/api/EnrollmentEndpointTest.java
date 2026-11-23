@@ -735,7 +735,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
         String correlationId = doToken(state);
 
         Map<String, String> komFormEnrollmentPayload = new HashMap<>();
-        komFormEnrollmentPayload.put("moduleNaam", "Quantum Computing Foundations");
+        komFormEnrollmentPayload.put("moduleNaam", "Quantum Computing Advanced");
         komFormEnrollmentPayload.put("moduleCode", "QCF-2026");
         komFormEnrollmentPayload.put("onderwijsperiodeStart", "2026-09-01");
         komFormEnrollmentPayload.put("onderwijsperiodeEind", "2027-01-31");
@@ -777,7 +777,7 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
         try (PDDocument document = PDDocument.load(pdf)) {
             String text = new PDFTextStripper().getText(document);
 
-            assertTrue(text.contains("Quantum Computing Foundations"));
+            assertTrue(text.contains("Quantum Computing Advanced"));
             assertTrue(text.contains("QCF-2026"));
 
             assertTrue(text.contains("Creative Business"));

@@ -76,7 +76,7 @@ public class CustomAgreementPdfService {
     private void writeDePartijen(PdfLayoutContext layout, CustomAgreementData data) throws IOException {
         layout.sectionHeading("De partijen");
 
-        layout.fieldGroup("Student :", List.of(
+        layout.fieldGroup("Student", List.of(
                 new String[]{"Naam", nullToEmpty(data.getStudentNaam())},
                 new String[]{"Studentnummer bij eigen instelling", nullToEmpty(data.getStudentnummer())},
                 new String[]{"Opleiding", nullToEmpty(data.getOpleiding())},
@@ -86,10 +86,10 @@ public class CustomAgreementPdfService {
         ), 15f);
         layout.horizontalRule();
 
-        layout.twoColumnRow("Thuisinstelling :", List.of(nullToEmpty(data.getThuisinstellingNaam())), 15f);
+        layout.twoColumnRow("Thuisinstelling", List.of(nullToEmpty(data.getThuisinstellingNaam())), 15f);
         layout.horizontalRule();
 
-        layout.twoColumnRow("Gastinstelling :", gastinstellingLines(data), 15f);
+        layout.twoColumnRow("Gastinstelling", gastinstellingLines(data), 15f);
         layout.horizontalRule();
     }
 
@@ -99,7 +99,7 @@ public class CustomAgreementPdfService {
         lines.add("");
         if (data.getGastinstellingDeadline() != null) {
             lines.add(String.format(
-                    "Zorg dat alle pagina's van de ondertekende leerovereenkomst uiterlijk %s ontvangen zijn bij :",
+                    "Zorg dat alle pagina's van de ondertekende leerovereenkomst uiterlijk %s ontvangen zijn bij:",
                     DATE_FORMAT.format(data.getGastinstellingDeadline())));
         }
         lines.add(nullToEmpty(data.getGastinstellingNaam()));
@@ -131,6 +131,7 @@ public class CustomAgreementPdfService {
                 new String[]{"Modulecode", nullToEmpty(data.getModuleCode())},
                 new String[]{"Onderwijsperiode", onderwijsperiode},
                 new String[]{"Faculteit", nullToEmpty(data.getFaculteit())},
+                new String[]{"Beschrijving", nullToEmpty(data.getBeschrijving())},
                 new String[]{"Onderwijsvorm", nullToEmpty(data.getOnderwijsvorm())},
                 new String[]{"Ingangseisen", nullToEmpty(data.getIngangseisen())},
                 new String[]{"Toetsing", nullToEmpty(data.getToetsing())},
@@ -140,6 +141,7 @@ public class CustomAgreementPdfService {
     }
 
     private void writeDeOvereenkomst(PdfLayoutContext layout, CustomAgreementData data) throws IOException {
+        layout.forceNewPage();
         layout.sectionHeading("De overeenkomst");
 
         String ec = data.getAantalEc() > 0 ? data.getAantalEc() + " EC" : "";
@@ -185,7 +187,7 @@ public class CustomAgreementPdfService {
                                      List<String[]> rows, String sideNote) throws IOException {
         layout.ensureSpace(30f);
         layout.moveDown(10f);
-        layout.line(heading + " :", FONT_BOLD, 11f, TEXT_COLOR, 16f);
+        layout.line(heading + ":", FONT_BOLD, 11f, TEXT_COLOR, 16f);
         if (note != null) {
             layout.line(note, FONT_ITALIC, 8.5f, MUTED_COLOR, 14f);
         }

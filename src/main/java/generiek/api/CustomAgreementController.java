@@ -99,9 +99,11 @@ public class CustomAgreementController {
                 .thuisinstellingNaam(details.map(CustomAgreementDetails::getThuisinstellingNaam).orElse(null))
                 .gastinstellingNaam(details.map(CustomAgreementDetails::getGastinstellingNaam).orElse(null))
                 .faculteit(details.map(CustomAgreementDetails::getFaculteit).orElse(null))
+                .beschrijving(details.map(CustomAgreementDetails::getBeschrijving).orElse(null))
                 .toetsing(details.map(CustomAgreementDetails::getToetsing).orElse(null))
                 .ingangseisen(details.map(CustomAgreementDetails::getIngangseisen).orElse(null))
                 .onderwijsvorm(details.map(CustomAgreementDetails::getOnderwijsvorm).orElse(null))
+                .aantalEc(details.map(CustomAgreementDetails::getAantalEc).orElse(0.0))
                 .gastinstellingDeadline(details.map(CustomAgreementDetails::getGastinstellingDeadline).orElse(null))
                 .build();
     }

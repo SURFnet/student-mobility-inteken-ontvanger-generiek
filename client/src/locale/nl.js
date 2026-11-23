@@ -1,4 +1,6 @@
 export default {
+    header: "Aanmelden",
+    backToEduXchange: "← terug naar eduXchange",
     title: "Nog een paar gegevens",
     intro: "Je thuisinstelling heeft niet alle gegevens aangeleverd die nodig zijn om je inschrijving te " +
         "voltooien. Vul de onderstaande gegevens aan.",
@@ -11,11 +13,11 @@ export default {
         studentnummer: "Studentnummer bij eigen instelling"
     },
     placeholders: {
-        naam: "Voor- en achternaam",
-        adres: "Straat en huisnummer, postcode en plaats",
+        naam: "Voorletters en achternaam",
+        adres: "Straat en huisnummer, postcode en woonplaats",
         email: "naam@voorbeeld.nl",
         telefoon: "+31612345678",
-        opleiding: "Bijv. Advanced Business Creation (Bachelor)",
+        opleiding: "Bijv. Psychology (Bachelor)",
         studentnummer: "Bijv. 000019"
     },
     required: "Dit veld is verplicht",
@@ -24,8 +26,11 @@ export default {
     submitting: "Bezig met genereren…",
     error: "Er is iets misgegaan. Probeer het later opnieuw of neem contact op met je instelling.",
     readyTitle: "Je leerovereenkomst is klaar",
-    readyIntro: "Download de leerovereenkomst, onderteken deze en stuur hem naar de gastinstelling. " +
-        "Klik daarna op 'Doorgaan' om je inschrijving af te ronden.",
+    readyIntro: "De leerovereenkomst is per email naar je verstuurd",
+    readyToDos: ["Onderteken zelf de leerovereenkomst","Laat deze ondertekenen door je thuisinstelling","Stuur hem naar je gastinstelling"],
+
+
+
     download: "Download PDF",
     continue: "Doorgaan"
 };

@@ -62,6 +62,9 @@ public class CustomAgreementDetails implements Serializable {
     private String faculteit;
 
     @Column
+    private String beschrijving;
+
+    @Column
     private String toetsing;
 
     @Column
@@ -69,6 +72,9 @@ public class CustomAgreementDetails implements Serializable {
 
     @Column
     private String onderwijsvorm;
+
+    @Column
+    private Double aantalEc;
 
     @Column
     private Instant created;
