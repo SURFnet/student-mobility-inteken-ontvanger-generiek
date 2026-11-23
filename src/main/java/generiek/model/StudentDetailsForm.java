@@ -20,7 +20,7 @@ public class StudentDetailsForm {
     @Schema(example = "Kalverstraat, 1234 AB Amsterdam")
     private String adres;
 
-    @Schema(example = "ruthbootsmasurfnl@example.com")
+    @Schema(example = "jan.jansen@example.com")
     private String email;
 
     @Schema(example = "+31622881967")
