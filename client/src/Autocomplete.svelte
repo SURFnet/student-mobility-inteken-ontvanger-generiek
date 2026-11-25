@@ -18,9 +18,11 @@
 
   let inputValue: string = $derived(value ?? '');
 
-  let sortedropdownItems: string[] = $derived(dropdownItems.sort((a, b) => a.localeCompare(b)));
+  let sortedDropdownItems: string[] = $derived(dropdownItems.sort((a, b) => a.localeCompare(b)));
   let filteredDropdownItems: string[] = $derived(
-    sortedropdownItems.filter((dropdownItem) => getInputValueIdxInDropdownItem(dropdownItem) >= 0)
+    sortedDropdownItems
+      .filter((dropdownItem) => getInputValueIdxInDropdownItem(dropdownItem) >= 0)
+      .filter((_, index) => index < 2000) // restrict to 2000 items. I don't expect there to be more, but lets be safe. A giant amount of items might kill browser performance since we don't do any virtualization yet. 2000 seems to be still fine even on a very crappy mobile phone.
   );
   let filteredDropdownItemsDisplayData = $derived(
     filteredDropdownItems.map((dropdownItem) => {
