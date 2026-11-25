@@ -4,6 +4,8 @@
     import {getParameterByName} from "./utils/queryParameters";
     import nl from "./locale/nl";
     import en from "./locale/en";
+    import Autocomplete from './Autocomplete.svelte';
+    import { educationNames } from './educationNames';
 
     const FIELD_ORDER = ["naam", "adres", "email", "telefoon", "opleiding", "studentnummer"];
 
@@ -264,11 +266,22 @@
             {#each displayedFields as field (field)}
                 <div class="field">
                     <label for={field}>{messages.labels[field]}</label>
-                    <input id={field}
-                           type={field === "email" ? "email" : "text"}
-                           placeholder={messages.placeholders[field]}
-                           bind:value={values[field]}
-                           required/>
+                    {#if field === 'opleiding'}
+                        <Autocomplete
+                            id={field}
+                            dropdownItems={educationNames}
+                            placeholder={messages.placeholders[field]}
+                            bind:value={values[field]}
+                        />
+                    {:else}
+                        <input
+                            id={field}
+                            type={field === 'email' ? 'email' : 'text'}
+                            placeholder={messages.placeholders[field]}
+                            bind:value={values[field]}
+                            required
+                        />
+                    {/if}
                 </div>
             {/each}
             <button type="submit" disabled={!allFilled}>
