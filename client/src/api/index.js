@@ -23,6 +23,10 @@ export function features() {
     return fetchJson("/api/features");
 }
 
+export function educationItemNames() {
+    return fetchJson("/api/educationItemNames");
+}
+
 export function studentDetails(correlationID) {
     return fetchJson(`/api/student-details?correlationID=${encodeURIComponent(correlationID)}`);
 }

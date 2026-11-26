@@ -1,11 +1,10 @@
 <script>
     import {onMount} from "svelte";
-    import {studentDetails, submitStudentDetails, customAgreementUrl, features} from "./api";
+    import {studentDetails, submitStudentDetails, customAgreementUrl, features, educationItemNames} from "./api";
     import {getParameterByName} from "./utils/queryParameters";
     import nl from "./locale/nl";
     import en from "./locale/en";
     import Autocomplete from './Autocomplete.svelte';
-    import { educationNames } from './educationNames';
 
     const FIELD_ORDER = ["naam", "adres", "email", "telefoon", "opleiding", "studentnummer"];
 
@@ -28,6 +27,13 @@
     let catalogUrl = null;
     let brokerUrl = null;
     let downloadClicked = false;
+    let educationNames = []
+
+    // load educationItemNames to show in the autocomplete control,
+    // if it fails we don't care too much, the control will still function as a regular input
+    educationItemNames()
+        .then(newEducationNames => { educationNames = newEducationNames })
+        .catch(() => {});
 
     features()
         .then(res => {
