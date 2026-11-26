@@ -3,7 +3,6 @@
 bundle*
 node_modules
 target
-index.html
 TODO.txt
 .classpath
 .project
@@ -12,3 +11,5 @@ database/
 docu
 OldEnrollmentEndpoint.java
 dependency*.tree
+client/dist/
+.DS_Store
