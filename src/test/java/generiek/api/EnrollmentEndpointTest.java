@@ -633,6 +633,8 @@ public class EnrollmentEndpointTest extends AbstractIntegrationTest {
         assertTrue(location.startsWith(authorizationUri));
 
         MultiValueMap<String, String> params = UriComponentsBuilder.fromHttpUrl(location).build().getQueryParams();
+        System.out.println("FULL LOCATION = " + location);
+        System.out.println("redirect_uri values = " + params.get("redirect_uri"));
         String scope = params.getFirst("scope");
         assertEquals("openid write", URLDecoder.decode(scope, "UTF-8"));
         return params.getFirst("state");
