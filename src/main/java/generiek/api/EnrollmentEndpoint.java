@@ -183,7 +183,7 @@ public class EnrollmentEndpoint {
         String authorizationURI = this.buildAuthorizationURI(enrollmentRequest);
 
         LOG.debug("Starting authorization for enrollment request: " + enrollmentRequest);
-
+        LOG.debug("authorizationURI = " + authorizationURI);
         return new RedirectView(authorizationURI);
     }
 
